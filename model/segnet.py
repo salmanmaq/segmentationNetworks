@@ -12,7 +12,7 @@ import torch.nn.functional as F
 class SegNet(nn.Module):
     """Segnet network."""
 
-    def __init__(self, input_nbr, label_nbr):
+    def __init__(self, num_classes):
         """Init fields."""
         super(SegNet, self).__init__()
 

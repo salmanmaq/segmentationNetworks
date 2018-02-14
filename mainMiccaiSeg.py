@@ -20,6 +20,7 @@ import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
 
+import utils
 from segnet import SegNet
 from miccaiDataLoader import miccaiDataset
 
@@ -46,8 +47,6 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
             help='evaluate model on validation set')
 parser.add_argument('--pre-trained', dest='pretrained', action='store_true',
             help='use pre-trained model')
-parser.add_argument('--half', dest='half', action='store_true',
-            help='use half-precision(16-bit)')
 parser.add_argument('--save-dir', dest='save_dir',
             help='The directory used to save the trained models',
             default='save_temp', type=str)
@@ -62,12 +61,6 @@ def main():
     # Check if the save directory exists or not
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
-
-    model = SegNet(3, 3)
-
-    #model.features = torch.nn.DataParallel(model.features)
-    if use_gpu:
-        model.cuda()
 
     # Optionally resume from a checkpoint
     if args.resume:
@@ -103,33 +96,48 @@ def main():
 
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Scale((224, 224)),
+            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
         ]),
-        'val': transforms.Compose([
-            transforms.Scale((224, 224)),
+        'trainval': transforms.Compose([
+            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            transforms.ToTensor(),
+        ]),
+        'test': transforms.Compose([
+            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
         ]),
     }
 
-    data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/miccai_all_images'
+    # Data Loading
+    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSeg'
+    # json path for class definitions
+    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegClasses.json'
 
-    image_datasets = {x: miccaiDataset(os.path.join(data_dir, x), data_transforms[x])
-                    for x in ['train', 'val']}
+    image_datasets = {x: cityscapesDataset(data_dir, x, data_transforms[x],
+                    json_path) for x in ['train', 'trainval', 'test']}
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x],
-                                                  batch_size=args.batch_size,
+                                                  batch_size=args.batchSize,
                                                   shuffle=True,
                                                   num_workers=args.workers)
-                  for x in ['train', 'val']}
-    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
+                  for x in ['train', 'trainval', 'test']}
+    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'trainval', 'test']}
+
+    # Get the dictionary for the id and RGB value pairs for the dataset
+    classes = image_datasets['train'].classes
+    key = utils.disentangleKey(classes)
+    num_classes = len(key)
+
+    # Initialize the model
+    model = SegNet(num_classes)
 
     # Define loss function (criterion) and optimizer
-    criterion = nn.MSELoss().cuda()
+    criterion = nn.MSELoss()
 
-    if args.half:
-        model.half()
-        criterion.half()
+    if use_gpu:
+        model.cuda()
+        criterion.cuda()
 
     #optimizer = torch.optim.SGD(model.parameters(), args.lr,
     #                            momentum=args.momentum,
@@ -138,17 +146,17 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)
 
     if args.evaluate:
-        validate(dataloaders['val'], model, criterion)
+        validate(dataloaders['test'], model, criterion)
         return
 
     for epoch in range(args.start_epoch, args.epochs):
         #adjust_learning_rate(optimizer, epoch)
 
         # Train for one epoch
-        train(dataloaders['train'], model, criterion, optimizer, epoch)
+        train(dataloaders['train'], model, criterion, optimizer, epoch, key, num_classes)
 
         # Evaulate on validation set
-        prec1 = validate(dataloaders['val'], model, criterion)
+        prec1 = validate(dataloaders['test'], model, criterion)
         prec1 = prec1.cpu().data.numpy()
 
         # Remember best prec1 and save checkpoint
@@ -156,14 +164,14 @@ def main():
         print(best_prec1)
         is_best = prec1 < best_prec1
         best_prec1 = min(prec1, best_prec1)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            #'optimizer': optimizer.state_dict(),
-        }, is_best, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
+        # save_checkpoint({
+        #     'epoch': epoch + 1,
+        #     'state_dict': model.state_dict(),
+        #     'best_prec1': best_prec1,
+        #     #'optimizer': optimizer.state_dict(),
+        # }, is_best, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, key, num_classes):
     '''
         Run one training epoch
     '''
@@ -321,56 +329,6 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
 
     return res
-
-def displaySamples(input, output):
-    ''' Display the original and the reconstructed image.
-        If a batch is used, it displays only the first image in the batch.
-
-        Args:
-            input image, output image
-    '''
-    if use_gpu:
-        input = input.cpu()
-        output = output.cpu()
-
-    unNorm = UnNormalize(mean=[0.485,0.456,0.406],std=[0.229,0.224,0.225])
-
-    input = input.data.numpy()
-    input = np.transpose(np.squeeze(input[0,:,:,:]), (1,2,0))
-    input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
-    #input = unNorm(input)
-
-    output = output.data.numpy()
-    output = np.transpose(np.squeeze(output[0,:,:,:]), (1,2,0))
-    output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
-    #output = unNorm(output)
-
-    cv2.namedWindow('Input Image', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('Reconstructed Image', cv2.WINDOW_NORMAL)
-
-    cv2.imshow('Input Image', input)
-    cv2.imshow('Reconstructed Image', output)
-    cv2.waitKey(1)
-
-class UnNormalize(object):
-    def __init__(self, mean, std):
-        self.mean = mean
-        self.std = std
-
-    def __call__(self, image):
-        """
-        Args:
-            image (Image): Numpy ndarray of size (H, W, C) to be normalized.
-        Returns:
-            Numpy ndarray: Normalized image.
-        """
-        im = np.zeros_like(image)
-        for i in range(image.shape[2]):
-            im[i,:,:] = np.maximum(np.zeros_like(image[i,:,:]),
-            np.minimum(np.ones_like(image[i,:,:]),
-            (image[i,:,:] * self.mean[i]) + self.std[i]))
-            # The normalize code -> t.sub_(m).div_(s)
-        return im
 
 if __name__ == '__main__':
     main()

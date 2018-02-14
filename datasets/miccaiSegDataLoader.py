@@ -14,7 +14,7 @@ class miccaiSegDataset(Dataset):
         miccaiSeg Dataset
     '''
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, json_path=None):
         '''
         Args:
             root_dir (string): Directory with all the images
@@ -26,6 +26,11 @@ class miccaiSegDataset(Dataset):
         self.gt_dir = os.path.join(root_dir, 'groundtruth')
         self.image_list = [f for f in os.listdir(self.img_dir) if (f.endswith('.png') or f.endswith('.jpg'))]
         self.transform = transform
+
+        if json_path:
+            # Read the json file containing classes information
+            # This is later used to generate masks from the segmented images
+            self.classes = json.load(open(json_path))['classes']
 
     def __len__(self):
         return len(self.image_list)
