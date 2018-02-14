@@ -38,7 +38,7 @@ class miccaiSegDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.img_dir, self.image_list[idx])
-        gt_file_name = self.image_list[idx][0:-4] + '_gt.jpg'
+        gt_file_name = self.image_list[idx][0:-4] + '_gt.png'
         gt_name = os.path.join(self.gt_dir, gt_file_name)
         image = Image.open(img_name)
         image = image.convert('RGB')

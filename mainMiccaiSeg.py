@@ -109,7 +109,7 @@ def main():
     }
 
     # Data Loading
-    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSeg'
+    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegRefined'
     # json path for class definitions
     json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegClasses.json'
 
@@ -181,7 +181,6 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
 
         # Process the network inputs and outputs
         gt_temp = gt * 255
-        print(gt_temp[0,0,100:200,100:200])
         label = utils.generateLabel4CE(gt_temp, key)
 
         img, label = Variable(img), Variable(label)
@@ -192,7 +191,7 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = criterion(seg, label)
+        loss = model.loss(seg, label)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
@@ -226,7 +225,7 @@ def validate(val_loader, model, criterion, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = criterion(seg, label)
+        loss = model.loss(seg, label)
 
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))

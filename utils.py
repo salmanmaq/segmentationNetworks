@@ -46,8 +46,8 @@ def displaySamples(img, generated, gt, use_gpu, key):
 
     generated = generated.data.numpy()
     generated = reverseOneHot(generated, key)
-    generated = np.squeeze(generated[0,:,:,:]) / 255
-    #generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB)
+    generated = np.squeeze(generated[0,:,:,:]).astype(np.uint8)
+    generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB) / 255
 
     img = img.data.numpy()
     img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
@@ -106,9 +106,8 @@ def generateLabel4CE(gt, key):
 
         # Iterate over all the key-value pairs in the class Key dict
         for k in range(len(key)):
-            catMask = catMask * 0
             rgb = key[k]
-            mask = np.where(np.all(img == rgb, axis = -1))
+            mask = np.where(np.all(img == rgb, axis = 2))
             catMask[mask] = k
 
         catMaskTensor = torch.from_numpy(catMask).unsqueeze(0)
@@ -139,6 +138,7 @@ def reverseOneHot(batch, key):
             #mask = np.where(np.all(idxs == k, axis=-1))
             segSingle[mask] = rgb
 
+        # print(segSingle[120:130,120:130,:])
         segMask = np.expand_dims(segSingle, axis=0)
         if 'generated' in locals():
             generated = np.concatenate((generated, segMask), axis=0)
