@@ -32,6 +32,10 @@ class encoder(nn.Module):
 
             nn.Conv2d(256, 512, 4, 2, 1, bias=False),
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
+            nn.ReLU(True),
+
+            nn.Conv2d(512, 1024, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(1024, momentum=batchNorm_momentum),
             nn.ReLU(True)
         )
 
@@ -44,10 +48,10 @@ class decoder(nn.Module):
         Decoder for the Segmentation Network
     '''
 
-    def __init__(self, batchNorm_momentum, num_classes):
+    def __init__(self, batchNorm_momentum, num_classes=19):
         super(decoder, self).__init__()
         self.main = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False),
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
@@ -63,7 +67,7 @@ class decoder(nn.Module):
             nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(64, 19, 4, 2, 1, bias=False),
             nn.Softmax(dim=1)
         )
 

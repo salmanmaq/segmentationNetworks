@@ -8,6 +8,7 @@ from torchvision import transforms, utils
 import numpy as np
 from PIL import Image
 import os
+import json
 
 class miccaiSegDataset(Dataset):
     '''

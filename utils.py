@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 import math
 
-def displaySamples(data, generated, gt, use_gpu, key):
+def displaySamples(img, generated, gt, use_gpu, key):
     ''' Display the original and the reconstructed image.
         If a batch is used, it displays only the first image in the batch.
 
@@ -17,7 +17,7 @@ def displaySamples(data, generated, gt, use_gpu, key):
     '''
 
     if use_gpu:
-        data = data.cpu()
+        img = img.cpu()
         generated = generated.cpu()
         gt = gt.cpu()
 
@@ -46,14 +46,14 @@ def displaySamples(data, generated, gt, use_gpu, key):
     generated = np.squeeze(generated[0,:,:,:]) / 255
     #generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB)
 
-    data = data.data.numpy()
-    data = np.transpose(np.squeeze(data[0,:,:,:]), (1,2,0))
-    data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+    img = img.data.numpy()
+    img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     #real = unNorm(real)
 
     # print(generated)
 
-    stacked = np.concatenate((data, generated, gt), axis = 1)
+    stacked = np.concatenate((img, generated, gt), axis = 1)
 
     cv2.namedWindow('Input | Gen | GT', cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Gen | GT', stacked)
@@ -135,15 +135,11 @@ def generateOneHot(gt, key):
         img = batch[i,:,:,:]
         img = np.transpose(img, (1,2,0))
         catMask = np.ones((img.shape[0], img.shape[1]))
-        # Multiply by 19 since 19 is considered label for the background class
 
         # Iterate over all the key-value pairs in the class Key dict
-        for k in range(len(key) + 1):
+        for k in range(len(key)):
             catMask = catMask * 0
-            if k == 19:
-                rgb = [0, 0, 0]
-            else:
-                rgb = key[k]
+            rgb = key[k]
             mask = np.where(np.all(img == rgb, axis = -1))
             catMask[mask] = 1
 
@@ -153,8 +149,8 @@ def generateOneHot(gt, key):
             else:
                 oneHot = catMaskTensor
 
-    label = oneHot.view(len(batch),len(key)+1,img.shape[0],img.shape[1])
-    return label
+    label = oneHot.view(len(batch),len(key),img.shape[0],img.shape[1])
+    return oneHot
 
 def reverseOneHot(batch, key):
     '''

@@ -1,12 +1,10 @@
 '''
-Image Reconstruction using SegNet
-Code adapted from: https://github.com/chengyangfu/pytorch-vgg-cifar10
+Image Segmentation using SegNet
 '''
 
 import argparse
 import os
 import shutil
-import time
 
 import numpy as np
 import cv2
@@ -17,13 +15,13 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-import torch.autograd.Variable as Variable
+from torch.autograd import Variable
 import torch.utils.data
 import torchvision.transforms as transforms
 
 import utils
-from segnet import SegNet
-from miccaiDataLoader import miccaiDataset
+from model.segnet import SegNet
+from datasets.miccaiSegDataLoader import miccaiSegDataset
 
 parser = argparse.ArgumentParser(description='PyTorch SegNet Training')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
@@ -38,7 +36,7 @@ parser.add_argument('--lr', '--learning-rate', default=0.05, type=float,
             metavar='LR', help='initial learning rate')
 parser.add_argument('--bnMomentum', default=0.1, type=float,
             help='Batch Norm Momentum (default: 0.1)')
-parser.add_argument('--imageSize', default=128, type=int,
+parser.add_argument('--imageSize', default=256, type=int,
             help='height/width of the input image to the network')
 parser.add_argument('--print-freq', '-p', default=1, type=int, metavar='N',
             help='print frequency (default:1)')
@@ -115,8 +113,8 @@ def main():
     # json path for class definitions
     json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegClasses.json'
 
-    image_datasets = {x: cityscapesDataset(data_dir, x, data_transforms[x],
-                    json_path) for x in ['train', 'trainval', 'test']}
+    image_datasets = {x: miccaiSegDataset(os.path.join(data_dir, x), data_transforms[x],
+                        json_path) for x in ['train', 'trainval', 'test']}
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                   batch_size=args.batchSize,
@@ -131,7 +129,7 @@ def main():
     num_classes = len(key)
 
     # Initialize the model
-    model = SegNet(num_args.bnMomentum, classes)
+    model = SegNet(args.bnMomentum, classes)
 
     # Define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
@@ -150,12 +148,12 @@ def main():
         #adjust_learning_rate(optimizer, epoch)
 
         # Train for one epoch
-        print(>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<)
+        print('>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<')
         train(dataloaders['train'], model, criterion, optimizer, epoch, key, num_classes)
 
         # Evaulate on validation set
 
-        print(>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<)
+        print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
         prec1 = validate(dataloaders['test'], model, criterion)
         # prec1 = prec1.cpu().data.numpy()
         #
@@ -189,11 +187,11 @@ def train(train_loader, model, criterion, optimizer, epoch, key, num_classes):
 
         if use_gpu:
             img = img.cuda()
-            oneHotGT.cuda()
+            oneHotGT = oneHotGT.cuda()
 
         # Compute output
         seg = model(img)
-        loss = criterion(output, oneHotGT)
+        loss = criterion(seg, oneHotGT)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
