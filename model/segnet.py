@@ -18,7 +18,7 @@ class encoder(nn.Module):
     def __init__(self, batchNorm_momentum):
         super(encoder, self).__init__()
         self.main = nn.Sequential(
-            nn.Conv2d(3, 64, 4, 1, 0, bias=False),
+            nn.Conv2d(3, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
@@ -34,7 +34,7 @@ class encoder(nn.Module):
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.Conv2d(512, 1024, 4, 2, 1, bias=False),
+            nn.Conv2d(512, 1024, 4, 1, 0, bias=False),
             nn.BatchNorm2d(1024, momentum=batchNorm_momentum),
             nn.ReLU(True)
         )

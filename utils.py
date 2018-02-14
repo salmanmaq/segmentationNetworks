@@ -16,10 +16,13 @@ def displaySamples(img, generated, gt, use_gpu, key):
             use_gpu, class-wise key
     '''
 
+    # OH = generateOneHot(gt, key)
+    # revOH = reverseOneHot(OH, key)
+
     if use_gpu:
         img = img.cpu()
         generated = generated.cpu()
-        gt = gt.cpu()
+        # gt = gt.cpu()
 
     #unNorm = UnNormalize(mean=[0.485,0.456,0.406],std=[0.229,0.224,0.225])
 
@@ -33,7 +36,7 @@ def displaySamples(img, generated, gt, use_gpu, key):
     # seg_mask = np.transpose(seg_mask, (1,2,0))
     # seg_mask = cv2.cvtColor(seg_mask, cv2.COLOR_BGR2RGB)
 
-    gt = gt.data.numpy()
+    gt = gt.numpy()
     gt = np.transpose(np.squeeze(gt[0,:,:,:]), (1,2,0))
     gt = cv2.cvtColor(gt, cv2.COLOR_BGR2RGB)
 
@@ -51,7 +54,7 @@ def displaySamples(img, generated, gt, use_gpu, key):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     #real = unNorm(real)
 
-    # print(generated)
+    # revOH = np.squeeze(revOH[0,:,:,:]) / 255
 
     stacked = np.concatenate((img, generated, gt), axis = 1)
 
@@ -87,6 +90,62 @@ def disentangleKey(key):
         dKey[class_id] = color_array
 
     return dKey
+
+def generateLabel4CE(gt, key):
+    '''
+        Generates the label for Cross Entropy Loss from a batch of groundtruth
+        segmentation images.
+    '''
+
+    batch = gt.numpy()
+    # Iterate over all images in a batch
+    for i in range(len(batch)):
+        img = batch[i,:,:,:]
+        img = np.transpose(img, (1,2,0))
+        catMask = np.zeros((img.shape[0], img.shape[1]))
+
+        # Iterate over all the key-value pairs in the class Key dict
+        for k in range(len(key)):
+            catMask = catMask * 0
+            rgb = key[k]
+            mask = np.where(np.all(img == rgb, axis = -1))
+            catMask[mask] = k
+
+        catMaskTensor = torch.from_numpy(catMask).unsqueeze(0)
+        if 'label' in locals():
+            label = torch.cat((label, catMaskTensor), 0)
+        else:
+            label = catMaskTensor
+
+    return label.long()
+
+def reverseOneHot(batch, key):
+    '''
+        Generates the segmented image from the output of a segmentation network.
+        Takes a batch of tensors and returns a batch of numpy images in RGB (not BGR).
+    '''
+
+    # Iterate over all images in a batch
+    for i in range(len(batch)):
+        vec = batch[i,:,:,:]
+        idxs = np.argmax(vec, axis=0)
+
+        segSingle = np.zeros([idxs.shape[0], idxs.shape[1], 3])
+
+        # Iterate over all the key-value pairs in the class Key dict
+        for k in range(len(key)):
+            rgb = key[k]
+            mask = idxs == k
+            #mask = np.where(np.all(idxs == k, axis=-1))
+            segSingle[mask] = rgb
+
+        segMask = np.expand_dims(segSingle, axis=0)
+        if 'generated' in locals():
+            generated = np.concatenate((generated, segMask), axis=0)
+        else:
+            generated = segMask
+
+    return generated
 
 def generatePresenceVector(batch, key):
     '''
@@ -134,7 +193,7 @@ def generateOneHot(gt, key):
     for i in range(len(batch)):
         img = batch[i,:,:,:]
         img = np.transpose(img, (1,2,0))
-        catMask = np.ones((img.shape[0], img.shape[1]))
+        catMask = np.zeros((img.shape[0], img.shape[1]))
 
         # Iterate over all the key-value pairs in the class Key dict
         for k in range(len(key)):
@@ -150,35 +209,7 @@ def generateOneHot(gt, key):
                 oneHot = catMaskTensor
 
     label = oneHot.view(len(batch),len(key),img.shape[0],img.shape[1])
-    return oneHot
-
-def reverseOneHot(batch, key):
-    '''
-        Generates the segmented image from the output of a segmentation network.
-        Takes a batch of tensors and returns a batch of numpy images in RGB (not BGR).
-    '''
-
-    # Iterate over all images in a batch
-    for i in range(len(batch)):
-        vec = batch[i,:,:,:]
-        idxs = np.argmax(vec, axis=0)
-
-        segSingle = np.zeros([idxs.shape[0], idxs.shape[1], 3])
-
-        # Iterate over all the key-value pairs in the class Key dict
-        for k in range(len(key)):
-            rgb = key[k]
-            mask = idxs == k
-            #mask = np.where(np.all(idxs == k, axis=-1))
-            segSingle[mask] = rgb
-
-        segMask = np.expand_dims(segSingle, axis=0)
-        if 'generated' in locals():
-            generated = np.concatenate((generated, segMask), axis=0)
-        else:
-            generated = segMask
-
-    return generated
+    return label
 
 def generateGTmask(batch, key):
     '''

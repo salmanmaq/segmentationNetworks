@@ -132,7 +132,7 @@ def main():
     model = SegNet(args.bnMomentum, classes)
 
     # Define loss function (criterion) and optimizer
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
 
     if use_gpu:
         model.cuda()
@@ -149,12 +149,12 @@ def main():
 
         # Train for one epoch
         print('>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<')
-        train(dataloaders['train'], model, criterion, optimizer, epoch, key, num_classes)
+        train(dataloaders['train'], model, criterion, optimizer, epoch, key)
 
         # Evaulate on validation set
 
         print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
-        prec1 = validate(dataloaders['test'], model, criterion)
+        prec1 = validate(dataloaders['test'], model, criterion, epoch, key)
         # prec1 = prec1.cpu().data.numpy()
         #
         # # Remember best prec1 and save checkpoint
@@ -169,7 +169,7 @@ def main():
         #     #'optimizer': optimizer.state_dict(),
         # }, is_best, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
-def train(train_loader, model, criterion, optimizer, epoch, key, num_classes):
+def train(train_loader, model, criterion, optimizer, epoch, key):
     '''
         Run one training epoch
     '''
@@ -181,31 +181,30 @@ def train(train_loader, model, criterion, optimizer, epoch, key, num_classes):
 
         # Process the network inputs and outputs
         gt_temp = gt * 255
-        oneHotGT = utils.generateOneHot(gt_temp, key).float()
+        print(gt_temp[0,0,100:200,100:200])
+        label = utils.generateLabel4CE(gt_temp, key)
 
-        img, oneHotGT = Variable(img), Variable(oneHotGT, requires_grad=False)
+        img, label = Variable(img), Variable(label)
 
         if use_gpu:
             img = img.cuda()
-            oneHotGT = oneHotGT.cuda()
+            label = label.cuda()
 
         # Compute output
         seg = model(img)
-        loss = criterion(seg, oneHotGT)
+        loss = criterion(seg, label)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        loss = loss
-
         print('[%d/%d][%d/%d] Loss: %.4f'
-              % (epoch, args.epochs, i, len(train_loader), loss.mean().data[0]))
+              % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key)
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, epoch, key):
     '''
         Run evaluation
     '''
@@ -213,31 +212,24 @@ def validate(val_loader, model, criterion):
     # Switch to evaluate mode
     model.eval()
 
-    for i, (img, gt) in enumerate(train_loader):
+    for i, (img, gt) in enumerate(val_loader):
 
         # Process the network inputs and outputs
         gt_temp = gt * 255
-        oneHotGT = utils.generateOneHot(gt_temp, key).float()
+        label = utils.generateLabel4CE(gt_temp, key)
 
-        img, oneHotGT = Variable(img), Variable(oneHotGT, requires_grad=False)
+        img, label = Variable(img), Variable(label)
 
         if use_gpu:
             img = img.cuda()
-            oneHotGT.cuda()
+            label = label.cuda()
 
         # Compute output
         seg = model(img)
-        loss = criterion(output, oneHotGT)
-
-        # Compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        loss = loss
+        loss = criterion(seg, label)
 
         print('[%d/%d][%d/%d] Loss: %.4f'
-              % (epoch, args.epochs, i, len(train_loader), loss.mean().data[0]))
+              % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key)
 
@@ -258,25 +250,6 @@ def adjust_learning_rate(optimizer, epoch):
     lr = args.lr * (0.5 ** (epoch // 30))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-
-def accuracy(output, target, topk=(1,)):
-    '''
-        Computes the precision@k for the specified values of k
-    '''
-
-    maxk = max(topk)
-    batch_size = target.size(0)
-
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-    res = []
-    for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0)
-        res.append(correct_k.mul_(100.0 / batch_size))
-
-    return res
 
 if __name__ == '__main__':
     main()
