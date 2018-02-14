@@ -16,7 +16,8 @@ import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import torch.optim
+import torch.optim as optim
+import torch.autograd.Variable as Variable
 import torch.utils.data
 import torchvision.transforms as transforms
 
@@ -24,21 +25,21 @@ import utils
 from segnet import SegNet
 from miccaiDataLoader import miccaiDataset
 
-parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+parser = argparse.ArgumentParser(description='PyTorch SegNet Training')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
             help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=20, type=int, metavar='N',
             help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
             help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=4, type=int, metavar='N',
-            help='mini-batch size (default: 4)')
+parser.add_argument('--batchSize', default=4, type=int,
+            help='Mini-batch size (default: 4)')
 parser.add_argument('--lr', '--learning-rate', default=0.05, type=float,
             metavar='LR', help='initial learning rate')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-            help='momentum (default: 0.9)')
-parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
-            metavar='W', help='weight decay (default: 5e-4)')
+parser.add_argument('--bnMomentum', default=0.1, type=float,
+            help='Batch Norm Momentum (default: 0.1)')
+parser.add_argument('--imageSize', default=128, type=int,
+            help='height/width of the input image to the network')
 parser.add_argument('--print-freq', '-p', default=1, type=int, metavar='N',
             help='print frequency (default:1)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -130,7 +131,7 @@ def main():
     num_classes = len(key)
 
     # Initialize the model
-    model = SegNet(num_classes)
+    model = SegNet(num_args.bnMomentum, classes)
 
     # Define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
@@ -139,11 +140,7 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    #optimizer = torch.optim.SGD(model.parameters(), args.lr,
-    #                            momentum=args.momentum,
-    #                            weight_decay=args.weight_decay)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr = args.lr)
+    optimizer = optim.Adam(model.parameters(), lr = args.lr)
 
     if args.evaluate:
         validate(dataloaders['test'], model, criterion)
@@ -153,17 +150,20 @@ def main():
         #adjust_learning_rate(optimizer, epoch)
 
         # Train for one epoch
+        print(>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<)
         train(dataloaders['train'], model, criterion, optimizer, epoch, key, num_classes)
 
         # Evaulate on validation set
-        prec1 = validate(dataloaders['test'], model, criterion)
-        prec1 = prec1.cpu().data.numpy()
 
-        # Remember best prec1 and save checkpoint
-        print(prec1)
-        print(best_prec1)
-        is_best = prec1 < best_prec1
-        best_prec1 = min(prec1, best_prec1)
+        print(>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<)
+        prec1 = validate(dataloaders['test'], model, criterion)
+        # prec1 = prec1.cpu().data.numpy()
+        #
+        # # Remember best prec1 and save checkpoint
+        # print(prec1)
+        # print(best_prec1)
+        # is_best = prec1 < best_prec1
+        # best_prec1 = min(prec1, best_prec1)
         # save_checkpoint({
         #     'epoch': epoch + 1,
         #     'state_dict': model.state_dict(),
@@ -176,102 +176,72 @@ def train(train_loader, model, criterion, optimizer, epoch, key, num_classes):
         Run one training epoch
     '''
 
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-
     # Switch to train mode
     model.train()
 
-    end = time.time()
+    for i, (img, gt) in enumerate(train_loader):
 
-    for i, input in enumerate(train_loader):
-        # Measure Data loading time
-        data_time.update(time.time() - end)
-        target = input.cuda()
-        input_var = torch.autograd.Variable(input).cuda()
-        target_var = torch.autograd.Variable(target)
-        if args.half:
-            input_var = input_var.half()
+        # Process the network inputs and outputs
+        gt_temp = gt * 255
+        oneHotGT = utils.generateOneHot(gt_temp, key).float()
+
+        img, oneHotGT = Variable(img), Variable(oneHotGT, requires_grad=False)
+
+        if use_gpu:
+            img = img.cuda()
+            oneHotGT.cuda()
 
         # Compute output
-        output = model(input_var)
-        loss = criterion(output, target_var)
-
-        if i % args.print_freq == 0:
-            displaySamples(target_var, output)
+        seg = model(img)
+        loss = criterion(output, oneHotGT)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        output = output.float()
-        loss = loss.float()
+        loss = loss
 
-        # Measure accuracy and record loss
-        #prec1 = accuracy(output.data, target)[0]
-        losses.update(loss.data[0], input.size(0))
-        #top1.update(prec1[0], input.size(0))
+        print('[%d/%d][%d/%d] Loss: %.4f'
+              % (epoch, args.epochs, i, len(train_loader), loss.mean().data[0]))
 
-        # Measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
-                      epoch, i, len(train_loader), batch_time=batch_time,
-                      data_time=data_time, loss=losses))
+        utils.displaySamples(img, seg, gt, use_gpu, key)
 
 def validate(val_loader, model, criterion):
     '''
         Run evaluation
     '''
 
-    batch_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-
     # Switch to evaluate mode
     model.eval()
 
-    end = time.time()
-    for i, input in enumerate(val_loader):
-        target = input.cuda()
-        input_var = torch.autograd.Variable(input, volatile=True).cuda()
-        target_var = torch.autograd.Variable(target, volatile=True)
-        if args.half:
-            input_var = input_var.half()
+    for i, (img, gt) in enumerate(train_loader):
+
+        # Process the network inputs and outputs
+        gt_temp = gt * 255
+        oneHotGT = utils.generateOneHot(gt_temp, key).float()
+
+        img, oneHotGT = Variable(img), Variable(oneHotGT, requires_grad=False)
+
+        if use_gpu:
+            img = img.cuda()
+            oneHotGT.cuda()
 
         # Compute output
-        output = model(input_var)
-        loss = criterion(output, target_var)
+        seg = model(img)
+        loss = criterion(output, oneHotGT)
 
-        output = output.float()
-        loss = loss.float()
+        # Compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-        if i % args.print_freq == 0:
-            displaySamples(target_var, output)
+        loss = loss
 
-        # Measure accuracy and record loss
-        #prec1 = accuracy(output.data, target)[0]
-        losses.update(loss.data[0], input.size(0))
-        #top1.update(prec1[0], input.size(0))
+        print('[%d/%d][%d/%d] Loss: %.4f'
+              % (epoch, args.epochs, i, len(train_loader), loss.mean().data[0]))
 
-        # Measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % args.print_freq == 0:
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
-                      i, len(val_loader), batch_time=batch_time,
-                      loss=losses))
+        utils.displaySamples(img, seg, gt, use_gpu, key)
 
     return loss
 
@@ -280,26 +250,6 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         Save the training model
     '''
     torch.save(state, filename)
-
-class AverageMeter(object):
-    '''
-        Computes and stores the average and current value
-    '''
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 def adjust_learning_rate(optimizer, epoch):
     '''
