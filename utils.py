@@ -6,9 +6,10 @@ import torch
 import numpy as np
 import cv2
 import math
+import os
 
-def displaySamples(img, generated, gt, use_gpu, key):
-    ''' Display the original and the reconstructed image.
+def displaySamples(img, generated, gt, use_gpu, key, save, epoch, save_dir):
+    ''' Display the original, generated, and the groundtruth image.
         If a batch is used, it displays only the first image in the batch.
 
         Args:
@@ -16,33 +17,13 @@ def displaySamples(img, generated, gt, use_gpu, key):
             use_gpu, class-wise key
     '''
 
-    # OH = generateOneHot(gt, key)
-    # revOH = reverseOneHot(OH, key)
-
     if use_gpu:
         img = img.cpu()
         generated = generated.cpu()
-        # gt = gt.cpu()
-
-    #unNorm = UnNormalize(mean=[0.485,0.456,0.406],std=[0.229,0.224,0.225])
-
-    # seg_mask = seg_mask.numpy()
-    # seg_mask = seg_mask[0,:,:,:]
-    # if seg_mask.shape[2] == 1:
-    #     real_depth = real.shape[1]
-    #     real_height = real.shape[2]
-    #     real_width = real.shape[3]
-    #     seg_mask = np.reshape(seg_mask, (real_depth, real_height, real_width))
-    # seg_mask = np.transpose(seg_mask, (1,2,0))
-    # seg_mask = cv2.cvtColor(seg_mask, cv2.COLOR_BGR2RGB)
 
     gt = gt.numpy()
     gt = np.transpose(np.squeeze(gt[0,:,:,:]), (1,2,0))
     gt = cv2.cvtColor(gt, cv2.COLOR_BGR2RGB)
-
-    #generated = generated.data.numpy()
-    #generated = labelToImage(generated, key)
-    #generated = generated * 255
 
     generated = generated.data.numpy()
     generated = reverseOneHot(generated, key)
@@ -52,22 +33,16 @@ def displaySamples(img, generated, gt, use_gpu, key):
     img = img.data.numpy()
     img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    #real = unNorm(real)
-
-    # revOH = np.squeeze(revOH[0,:,:,:]) / 255
 
     stacked = np.concatenate((img, generated, gt), axis = 1)
 
+    if save:
+        file_name = 'epoch_%d.png' %(epoch)
+        save_path = os.path.join(save_dir, file_name)
+        cv2.imwrite(save_path, stacked)
+
     cv2.namedWindow('Input | Gen | GT', cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Gen | GT', stacked)
-
-    # cv2.namedWindow('Real Image', cv2.WINDOW_NORMAL)
-    # cv2.namedWindow('Reconstructed Image', cv2.WINDOW_NORMAL)
-    # cv2.namedWindow('Reconstructed Image', cv2.WINDOW_NORMAL)
-    #
-    # cv2.imshow('Real Image', real)
-    # cv2.imshow('Reconstructed Image', output)
-    # cv2.imshow('Segmentation Mask', seg_mask)
 
     cv2.waitKey(1)
 
@@ -121,7 +96,8 @@ def generateLabel4CE(gt, key):
 def reverseOneHot(batch, key):
     '''
         Generates the segmented image from the output of a segmentation network.
-        Takes a batch of tensors and returns a batch of numpy images in RGB (not BGR).
+        Takes a batch of numpy oneHot encoded tensors and returns a batch of
+        numpy images in RGB (not BGR).
     '''
 
     # Iterate over all images in a batch
@@ -151,8 +127,8 @@ def generatePresenceVector(batch, key):
     '''
         Generate a vector with dimensions of classes equal to the number of
         classes. Each elements corresponds to the presence of a particular
-        class in the image: It is 1 if a certain class is present, or 0 if it
-        is absent.
+        class in the image: It is the fraction of pixels a particular category
+        in an image, and is 0 if the class is absent from that image.
     '''
     batch = batch.numpy()
     # Iterate over all images in a batch
@@ -270,3 +246,91 @@ def labelToImage(label, key):
     gen = np.reshape(gen, (img_dim, img_dim, 3))
 
     return gen
+
+#################### Reconstruction Utilities ######################
+def generateLabel4ReconCE(batch):
+    '''
+        Generates the label for Cross Entropy Loss from a batch of images.
+        Also separates into the three RGB channels (for channel-wise loss).
+
+        Input: PyTorch Tensor
+        Output: 3 x PyTorch Tensors corrsponding to the RGB channels
+    '''
+
+    # Iterate over all images in a batch
+    for i in range(len(batch)):
+        img = batch[i,:,:,:]
+
+        R = img[0,:,:]
+        G = img[1,:,:]
+        B = img[2,:,:]
+
+        if 'R_label' in locals():
+            R_label = torch.cat((R_label, R), 0)
+        else:
+            R_label = R
+        if 'G_label' in locals():
+            G_label = torch.cat((G_label, G), 0)
+        else:
+            G_label = G
+        if 'B_label' in locals():
+            B_label = torch.cat((B_label, B), 0)
+        else:
+            B_label = B
+
+    return R_label.long(), G_label.long(), B_label.long()
+
+def displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu):
+    ''' Display the original and the reconstructed image.
+        If a batch is used, it displays only the first image in the batch.
+
+        Args:
+            input image, R-channel output, G-channel output, B-channel output,
+            use_gpu
+    '''
+
+    if use_gpu:
+        img = img.cpu()
+        R_gen = R_gen.cpu()
+        G_gen = G_gen.cpu()
+        B_gen = B_gen.cpu()
+
+    R_gen = R_gen.data.numpy()
+    G_gen = G_gen.data.numpy()
+    B_gen = B_gen.data.numpy()
+    generated = reverseReconOneHot(R_gen, G_gen, B_gen)
+    generated = np.squeeze(generated[0,:,:,:]).astype(np.uint8)
+    generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB) / 255
+
+    img = img.data.numpy()
+    img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    stacked = np.concatenate((img, generated), axis = 1)
+
+    cv2.namedWindow('Input | Generated', cv2.WINDOW_NORMAL)
+    cv2.imshow('Input | Generated', stacked)
+
+    cv2.waitKey(1)
+
+def reverseReconOneHot(R_batch, G_batch, B_batch):
+    '''
+        Generates the reconstructed image from the output of a Reconstruction
+        network.
+        Takes a batch of numpy one-hot tensors on individual RGB channels
+        and returns a batch of numpy images in RGB (not BGR).
+    '''
+    batchSize = len(R_batch)
+    # Iterate over all images in a batch
+    for i in range(batchSize):
+        R = np.expand_dims(np.argmax(R_batch[i,:,:], axis=0), axis=0)
+        G = np.expand_dims(np.argmax(G_batch[i,:,:], axis=0), axis=0)
+        B = np.expand_dims(np.argmax(B_batch[i,:,:], axis=0), axis=0)
+
+        concatenated = np.concatenate((R, G, B), axis=0)
+        if 'img' in locals():
+            img = np.concatenate((img, concatenated), axis=0)
+        else:
+            img = concatenated
+
+    return img

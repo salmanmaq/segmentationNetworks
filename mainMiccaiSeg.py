@@ -51,6 +51,8 @@ parser.add_argument('--pre-trained', dest='pretrained', action='store_true',
 parser.add_argument('--save-dir', dest='save_dir',
             help='The directory used to save the trained models',
             default='save_temp', type=str)
+parser.add_argument('--saveTest', default='False', type=str,
+            help='Saves the validation/test images if True')
 
 best_prec1 = np.inf
 use_gpu = torch.cuda.is_available()
@@ -58,6 +60,11 @@ use_gpu = torch.cuda.is_available()
 def main():
     global args, best_prec1
     args = parser.parse_args()
+
+    if args.saveTest == 'True':
+        args.saveTest = True
+    elif args.saveTest == 'False':
+        args.saveTest = False
 
     # Check if the save directory exists or not
     if not os.path.exists(args.save_dir):
@@ -190,7 +197,6 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
 
         # Compute output
         seg = model(img)
-        #loss = model.loss(seg, label)
         loss = criterion(seg, label)
 
         # Compute gradient and do SGD step
@@ -201,7 +207,9 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
 
-        utils.displaySamples(img, seg, gt, use_gpu, key)
+        utils.displaySamples(img, seg, gt, use_gpu, key, False, epoch,
+                             args.save_dir)
+
 
 def validate(val_loader, model, criterion, epoch, key):
     '''
@@ -231,7 +239,8 @@ def validate(val_loader, model, criterion, epoch, key):
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
 
-        utils.displaySamples(img, seg, gt, use_gpu, key)
+        utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
+                             args.save_dir)
 
     return loss
 
