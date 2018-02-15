@@ -38,6 +38,8 @@ parser.add_argument('--bnMomentum', default=0.1, type=float,
             help='Batch Norm Momentum (default: 0.1)')
 parser.add_argument('--imageSize', default=256, type=int,
             help='height/width of the input image to the network')
+parser.add_argument('--resizedImageSize', default=224, type=int,
+            help='height/width of the resized image to the network')
 parser.add_argument('--print-freq', '-p', default=1, type=int, metavar='N',
             help='print frequency (default:1)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -79,17 +81,21 @@ def main():
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            transforms.TenCrop(args.resizedImageSize),
+            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
             #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
             #transforms.RandomHorizontalFlip(),
             #transforms.RandomVerticalFlip(),
-            transforms.ToTensor(),
+            #transforms.ToTensor(),
         ]),
         'trainval': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            transforms.TenCrop(args.resizedImageSize),
+            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
             #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
             #transforms.RandomHorizontalFlip(),
             #transforms.RandomVerticalFlip(),
-            transforms.ToTensor(),
+            #transforms.ToTensor(),
         ]),
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
@@ -167,6 +173,10 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
     model.train()
 
     for i, (img, gt) in enumerate(train_loader):
+
+        # For TenCrop Data Augmentation
+        img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
+        gt = gt.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
         gt_temp = gt * 255
