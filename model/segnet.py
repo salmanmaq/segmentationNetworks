@@ -19,7 +19,7 @@ class encoder(nn.Module):
         super(encoder, self).__init__()
         self.main = nn.Sequential(
             nn.Conv2d(3, 64, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64, momentum=batchNorm_momentum),
+            # nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
             nn.Conv2d(64, 128, 4, 2, 1, bias=False),
