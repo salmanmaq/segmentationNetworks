@@ -88,15 +88,6 @@ def main():
             #transforms.RandomVerticalFlip(),
             #transforms.ToTensor(),
         ]),
-        'trainval': transforms.Compose([
-            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
-            transforms.TenCrop(args.resizedImageSize),
-            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
-            #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
-            #transforms.RandomHorizontalFlip(),
-            #transforms.RandomVerticalFlip(),
-            #transforms.ToTensor(),
-        ]),
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
@@ -106,15 +97,15 @@ def main():
     # Data Loading
     data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/m2cai16-tool/train_dataset'
 
-    image_datasets = {x: miccaiDataset(os.path.join(data_dir, x), data_transforms[x],
-                        json_path) for x in ['train', 'trainval', 'test']}
+    image_datasets = {x: miccaiDataset(os.path.join(data_dir, x), data_transforms[x])
+                        for x in ['train', 'test']}
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                   batch_size=args.batchSize,
                                                   shuffle=True,
                                                   num_workers=args.workers)
-                  for x in ['train', 'trainval', 'test']}
-    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'trainval', 'test']}
+                  for x in ['train', 'test']}
+    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 
     # Initialize the model
     model = ReconNet(args.bnMomentum)

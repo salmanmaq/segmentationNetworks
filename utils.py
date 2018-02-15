@@ -251,7 +251,8 @@ def labelToImage(label, key):
     return gen
 
 #################### Reconstruction Utilities ######################
-def generateLabel4ReconCE(batch):
+
+def generateLabels4ReconCE(batch):
     '''
         Generates the label for Cross Entropy Loss from a batch of images.
         Also separates into the three RGB channels (for channel-wise loss).
