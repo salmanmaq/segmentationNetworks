@@ -76,30 +76,19 @@ def main():
 
     cudnn.benchmark = True
 
-    # data_transforms = {
-    #     'train': transforms.Compose([
-    #         transforms.Scale(256),
-    #         transforms.RandomSizedCrop(224),
-    #         transforms.RandomHorizontalFlip(),
-    #         transforms.ToTensor(),
-    #         transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225]),
-    #     ]),
-    #     'val': transforms.Compose([
-    #         transforms.Scale(256),
-    #         transforms.CenterCrop(224),
-    #         transforms.RandomHorizontalFlip(),
-    #         transforms.ToTensor(),
-    #         transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225]),
-    #     ]),
-    # }
-
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
+            #transforms.RandomHorizontalFlip(),
+            #transforms.RandomVerticalFlip(),
             transforms.ToTensor(),
         ]),
         'trainval': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
+            #transforms.RandomHorizontalFlip(),
+            #transforms.RandomVerticalFlip(),
             transforms.ToTensor(),
         ]),
         'test': transforms.Compose([
@@ -191,7 +180,8 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = model.loss(seg, label)
+        #loss = model.loss(seg, label)
+        loss = criterion(seg, label)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
@@ -225,7 +215,8 @@ def validate(val_loader, model, criterion, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = model.loss(seg, label)
+        #loss = model.loss(seg, label)
+        loss = criterion(seg, label)
 
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
