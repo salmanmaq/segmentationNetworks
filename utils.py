@@ -8,13 +8,15 @@ import cv2
 import math
 import os
 
-def displaySamples(img, generated, gt, use_gpu, key, save, epoch, save_dir):
+def displaySamples(img, generated, gt, use_gpu, key, save, epoch, imageNum,
+    save_dir):
     ''' Display the original, generated, and the groundtruth image.
         If a batch is used, it displays only the first image in the batch.
 
         Args:
             input image, output image, groundtruth segmentation,
-            use_gpu, class-wise key
+            use_gpu, class-wise key, save or not?, epoch, image number,
+            save directory
     '''
 
     if use_gpu:
@@ -37,11 +39,12 @@ def displaySamples(img, generated, gt, use_gpu, key, save, epoch, save_dir):
     stacked = np.concatenate((img, generated, gt), axis = 1)
 
     if save:
-        file_name = 'epoch_%d.png' %(epoch)
+        file_name = 'epoch_%d_img_%d.png' %(epoch, imageNum)
         save_path = os.path.join(save_dir, file_name)
-        cv2.imwrite(save_path, stacked)
+        cv2.imwrite(save_path, stacked*255)
 
-    cv2.namedWindow('Input | Gen | GT', cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Input | Gen | GT' %(epoch, imageNum),
+                    cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Gen | GT', stacked)
 
     cv2.waitKey(1)

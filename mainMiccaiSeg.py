@@ -208,7 +208,7 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
               % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key, False, epoch,
-                             args.save_dir)
+                             i, args.save_dir)
 
 
 def validate(val_loader, model, criterion, epoch, key):
@@ -240,7 +240,7 @@ def validate(val_loader, model, criterion, epoch, key):
               % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
-                             args.save_dir)
+                             i, args.save_dir)
 
     return loss
 
