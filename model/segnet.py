@@ -53,23 +53,24 @@ class decoder(nn.Module):
         self.main = nn.Sequential(
             nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False),
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
-            nn.Dropout(),
+            nn.Dropout2d(),
             nn.ReLU(True),
 
             nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
             nn.BatchNorm2d(256, momentum=batchNorm_momentum),
-            nn.Dropout(),
+            nn.Dropout2d(),
             nn.ReLU(True),
 
             nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
             nn.BatchNorm2d(128, momentum=batchNorm_momentum),
-            nn.Dropout(),
+            nn.Dropout2d(),
             nn.ReLU(True),
 
             nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
+            # TODO: num_classes = 19 is hard-coded below. Change that.
             nn.ConvTranspose2d(64, 19, 4, 2, 1, bias=False),
             nn.Softmax(dim=1)
         )
