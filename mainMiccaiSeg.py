@@ -233,7 +233,6 @@ def validate(val_loader, model, criterion, epoch, key):
 
         # Compute output
         seg = model(img)
-        #loss = model.loss(seg, label)
         loss = criterion(seg, label)
 
         print('[%d/%d][%d/%d] Loss: %.4f'

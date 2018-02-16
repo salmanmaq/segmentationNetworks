@@ -80,10 +80,11 @@ class decoder(nn.Module):
         return output
 
 class SegNet(nn.Module):
-    """Segnet network."""
+    '''
+        Segnet network
+    '''
 
     def __init__(self, batchNorm_momentum, num_classes):
-        """Init fields."""
         super(SegNet, self).__init__()
         self.encoder = encoder(batchNorm_momentum)
         self.decoder = decoder(batchNorm_momentum, num_classes)
