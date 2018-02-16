@@ -18,6 +18,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torch.utils.data
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
 import utils
 from model.reconNet import ReconNet
@@ -111,7 +112,7 @@ def main():
     model = ReconNet(args.bnMomentum)
 
     # Define loss function (criterion) and optimizer
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.KLDivLoss()
 
     if use_gpu:
         model.cuda()
@@ -162,37 +163,29 @@ def train(train_loader, model, criterion, optimizer, epoch):
         #img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
-        img_temp = img * 255
-        R_label, G_label, B_label = utils.generateLabels4ReconCE(img_temp)
-
+        label = Variable(img)
         img = Variable(img)
-        R_label = Variable(R_label)
-        G_label = Variable(G_label)
-        B_label = Variable(B_label)
 
         if use_gpu:
             img = img.cuda()
-            R_label = R_label.cuda()
-            G_label = G_label.cuda()
-            B_label = B_label.cuda()
+            label = label.cuda()
 
         # Compute output
-        R_gen, G_gen, B_gen = model(img)
-        R_loss = criterion(R_gen, R_label)
-        G_loss = criterion(G_gen, G_label)
-        B_loss = criterion(B_gen, B_label)
+        gen = model(img)
+        mseLoss = F.mse_loss(gen, label)
+        klLoss = criterion(gen, label)
 
-        loss = R_loss + G_loss + B_loss
+        loss = mseLoss + klLoss
         # Compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        print('[%d/%d][%d/%d] R-Loss: %.4f | G-Loss: %.4f | B-Loss: %.4f | Total-Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(train_loader)-1, R_loss.mean().data[0],
-              G_loss.mean().data[0], B_loss.mean().data[0], loss.mean().data[0]))
+        print('[%d/%d][%d/%d] MSE-Loss: %.4f | KLDiv-Loss: %.4f | Total-Loss: %.4f'
+              % (epoch, args.epochs-1, i, len(train_loader)-1, mseLoss.mean().data[0],
+              klLoss.mean().data[0], loss.mean().data[0]))
 
-        utils.displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu)
+        utils.displayReconSamples(img, gen, use_gpu)
 
 def validate(val_loader, model, criterion, epoch, key):
     '''
@@ -205,36 +198,28 @@ def validate(val_loader, model, criterion, epoch, key):
     for i, img in enumerate(val_loader):
 
         # For TenCrop Data Augmentation
-        img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
+        #img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
-        img_temp = img * 255
-        R_label, G_label, B_label = utils.generateLabels4ReconCE(img_temp)
-
+        label = Variable(img)
         img = Variable(img)
-        R_label = Variable(R_label)
-        G_label = Variable(G_label)
-        B_label = Variable(B_label)
 
         if use_gpu:
             img = img.cuda()
-            R_label = R_label.cuda()
-            G_label = G_label.cuda()
-            B_label = B_label.cuda()
+            label = label.cuda()
 
         # Compute output
-        R_gen, G_gen, B_gen = model(img)
-        R_loss = criterion(R_gen, R_label)
-        G_loss = criterion(G_gen, G_label)
-        B_loss = criterion(B_gen, B_label)
+        gen = model(img)
+        mseLoss = F.mse_loss(gen, label)
+        klLoss = criterion(gen, label)
 
-        loss = R_loss + G_loss + B_loss
+        loss = mseLoss + klLoss
 
-        print('[%d/%d][%d/%d] R-Loss: %.4f | G-Loss: %.4f | B-Loss: %.4f | Total-Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(val_loader)-1, R_loss.mean().data[0],
-              G_loss.mean().data[0], B_loss.mean().data[0], loss.mean().data[0]))
+        print('[%d/%d][%d/%d] MSE-Loss: %.4f | KLDiv-Loss: %.4f | Total-Loss: %.4f'
+              % (epoch, args.epochs-1, i, len(val_loader)-1, mseLoss.mean().data[0],
+              klLoss.mean().data[0], loss.mean().data[0]))
 
-        utils.displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu)
+        utils.displayReconSamples(img, gen, use_gpu)
 
     return loss
 

@@ -284,7 +284,7 @@ def generateLabels4ReconCE(batch):
 
     return R_label.long(), G_label.long(), B_label.long()
 
-def displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu):
+def displayReconSamples(img, gen, use_gpu):
     ''' Display the original and the reconstructed image.
         If a batch is used, it displays only the first image in the batch.
 
@@ -295,22 +295,17 @@ def displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu):
 
     if use_gpu:
         img = img.cpu()
-        R_gen = R_gen.cpu()
-        G_gen = G_gen.cpu()
-        B_gen = B_gen.cpu()
+        gen = gen.cpu()
 
-    R_gen = R_gen.data.numpy()
-    G_gen = G_gen.data.numpy()
-    B_gen = B_gen.data.numpy()
-    generated = reverseReconOneHot(R_gen, G_gen, B_gen)
-    generated = np.squeeze(generated[0,:,:]).astype(np.uint8)
-    generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB) / 255
+    gen = gen.data.numpy()
+    gen = np.transpose(np.squeeze(gen[0,:,:,:]), (1,2,0))
+    gen = cv2.cvtColor(gen, cv2.COLOR_BGR2RGB)
 
     img = img.data.numpy()
     img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    stacked = np.concatenate((img, generated), axis = 1)
+    stacked = np.concatenate((img, gen), axis = 1)
 
     cv2.namedWindow('Input | Generated', cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Generated', stacked)
