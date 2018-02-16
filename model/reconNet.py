@@ -48,32 +48,32 @@ class decoder(nn.Module):
     def __init__(self, batchNorm_momentum):
         super(decoder, self).__init__()
 
-        self.CT1 = nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False),
-        self.BN1 = nn.BatchNorm2d(512, momentum=batchNorm_momentum),
-        self.D1 = nn.Dropout2d(),
-        self.R1 = nn.ReLU(True),
+        self.CT1 = nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False)
+        self.BN1 = nn.BatchNorm2d(512, momentum=batchNorm_momentum)
+        self.D1 = nn.Dropout2d()
+        self.R1 = nn.ReLU(True)
 
-        self.CT2 = nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
-        self.BN2 = nn.BatchNorm2d(256, momentum=batchNorm_momentum),
-        self.D2 = nn.Dropout2d(),
-        self.R2 = nn.ReLU(True),
+        self.CT2 = nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False)
+        self.BN2 = nn.BatchNorm2d(256, momentum=batchNorm_momentum)
+        self.D2 = nn.Dropout2d()
+        self.R2 = nn.ReLU(True)
 
-        self.CT3 = nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
-        self.BN3 = nn.BatchNorm2d(128, momentum=batchNorm_momentum),
-        self.D3 = nn.Dropout2d(),
-        self.R3 = nn.ReLU(True),
+        self.CT3 = nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False)
+        self.BN3 = nn.BatchNorm2d(128, momentum=batchNorm_momentum)
+        self.D3 = nn.Dropout2d()
+        self.R3 = nn.ReLU(True)
 
-        self.CT4 = nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
-        self.BN4 = nn.BatchNorm2d(64, momentum=batchNorm_momentum),
-        self.R4 = nn.ReLU(True),
+        self.CT4 = nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False)
+        self.BN4 = nn.BatchNorm2d(64, momentum=batchNorm_momentum)
+        self.R4 = nn.ReLU(True)
 
-        self.CT5A = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False),
-        self.CT5B = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False),
-        self.CT5B = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False),
+        self.CT5A = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False)
+        self.CT5B = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False)
+        self.CT5C = nn.ConvTranspose2d(64, 255, 4, 2, 1, bias=False)
         self.SM = nn.Softmax(dim=1)
 
-    def forward(self, input):
-        x = self.CT1(input)
+    def forward(self, x):
+        x = self.CT1(x)
         x = self.BN1(x)
         x = self.D1(x)
         x = self.R1(x)

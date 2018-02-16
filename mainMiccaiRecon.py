@@ -81,12 +81,12 @@ def main():
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
-            transforms.TenCrop(args.resizedImageSize),
-            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+            #transforms.TenCrop(args.resizedImageSize),
+            #transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
             #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
             #transforms.RandomHorizontalFlip(),
             #transforms.RandomVerticalFlip(),
-            #transforms.ToTensor(),
+            transforms.ToTensor(),
         ]),
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
@@ -159,7 +159,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     for i, img in enumerate(train_loader):
 
         # For TenCrop Data Augmentation
-        img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
+        #img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
         img_temp = img * 255

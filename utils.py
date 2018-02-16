@@ -265,9 +265,9 @@ def generateLabels4ReconCE(batch):
     for i in range(len(batch)):
         img = batch[i,:,:,:]
 
-        R = img[0,:,:]
-        G = img[1,:,:]
-        B = img[2,:,:]
+        R = img[0,:,:].unsqueeze(0)
+        G = img[1,:,:].unsqueeze(0)
+        B = img[2,:,:].unsqueeze(0)
 
         if 'R_label' in locals():
             R_label = torch.cat((R_label, R), 0)
@@ -303,7 +303,7 @@ def displayReconSamples(img, R_gen, G_gen, B_gen, use_gpu):
     G_gen = G_gen.data.numpy()
     B_gen = B_gen.data.numpy()
     generated = reverseReconOneHot(R_gen, G_gen, B_gen)
-    generated = np.squeeze(generated[0,:,:,:]).astype(np.uint8)
+    generated = np.squeeze(generated[0,:,:]).astype(np.uint8)
     generated = cv2.cvtColor(generated, cv2.COLOR_BGR2RGB) / 255
 
     img = img.data.numpy()
