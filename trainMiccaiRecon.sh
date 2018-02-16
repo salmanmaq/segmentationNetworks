@@ -1,1 +1,1 @@
-python mainMiccaiRecon.py --save-dir=save_MiccaiRecon --batchSize 16 --lr 0.005 --epochs 500 --imageSize 256 |& tee -a log_MiccaiRecon
+python mainMiccaiRecon.py --save-dir=save_MiccaiRecon --batchSize 64 --lr 0.01 --epochs 2 --imageSize 256 |& tee -a log_MiccaiRecon

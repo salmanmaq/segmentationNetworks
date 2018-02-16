@@ -72,7 +72,6 @@ def main():
             args.start_epoch = checkpoint['epoch']
             best_prec1 = checkpoint['best_prec1']
             model.load_state_dict(checkpoint['state_dict'])
-            #optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})".format(args.evaluate, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
@@ -96,7 +95,8 @@ def main():
     }
 
     # Data Loading
-    data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/m2cai16-tool/train_dataset'
+    #data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/m2cai16-tool/train_dataset'
+    data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/miccai_all_images_small'
 
     image_datasets = {x: miccaiDataset(os.path.join(data_dir, x), data_transforms[x])
                         for x in ['train', 'test']}
@@ -134,20 +134,13 @@ def main():
         # Evaulate on validation set
 
         print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
-        prec1 = validate(dataloaders['test'], model, criterion, epoch)
-        # prec1 = prec1.cpu().data.numpy()
-        #
-        # # Remember best prec1 and save checkpoint
-        # print(prec1)
-        # print(best_prec1)
-        # is_best = prec1 < best_prec1
-        # best_prec1 = min(prec1, best_prec1)
-        # save_checkpoint({
-        #     'epoch': epoch + 1,
-        #     'state_dict': model.state_dict(),
-        #     'best_prec1': best_prec1,
-        #     #'optimizer': optimizer.state_dict(),
-        # }, is_best, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
+        validate(dataloaders['test'], model, criterion, epoch)
+
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            #'optimizer': optimizer.state_dict(),
+        }, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
 def train(train_loader, model, criterion, optimizer, epoch):
     '''
@@ -183,7 +176,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         utils.displayReconSamples(img, gen, use_gpu)
 
-def validate(val_loader, model, criterion, epoch, key):
+def validate(val_loader, model, criterion, epoch):
     '''
         Run evaluation
     '''
@@ -212,7 +205,7 @@ def validate(val_loader, model, criterion, epoch, key):
 
     return loss
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
     '''
         Save the training model
     '''
