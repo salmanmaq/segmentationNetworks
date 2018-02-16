@@ -112,7 +112,7 @@ def main():
     model = ReconNet(args.bnMomentum)
 
     # Define loss function (criterion) and optimizer
-    criterion = nn.KLDivLoss()
+    criterion = nn.L1Loss()
 
     if use_gpu:
         model.cuda()
@@ -162,7 +162,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # For TenCrop Data Augmentation
         #img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
 
-        # Process the network inputs and outputs
         label = Variable(img)
         img = Variable(img)
 
@@ -172,18 +171,15 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # Compute output
         gen = model(img)
-        mseLoss = F.mse_loss(gen, label)
-        klLoss = criterion(gen, label)
+        loss = criterion(gen, label)
 
-        loss = mseLoss + klLoss
         # Compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        print('[%d/%d][%d/%d] MSE-Loss: %.4f | KLDiv-Loss: %.4f | Total-Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(train_loader)-1, mseLoss.mean().data[0],
-              klLoss.mean().data[0], loss.mean().data[0]))
+        print('[%d/%d][%d/%d] Total-Loss: %.4f'
+              % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
 
         utils.displayReconSamples(img, gen, use_gpu)
 
@@ -197,9 +193,6 @@ def validate(val_loader, model, criterion, epoch, key):
 
     for i, img in enumerate(val_loader):
 
-        # For TenCrop Data Augmentation
-        #img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
-
         # Process the network inputs and outputs
         label = Variable(img)
         img = Variable(img)
@@ -210,14 +203,10 @@ def validate(val_loader, model, criterion, epoch, key):
 
         # Compute output
         gen = model(img)
-        mseLoss = F.mse_loss(gen, label)
-        klLoss = criterion(gen, label)
+        loss = criterion(gen, label)
 
-        loss = mseLoss + klLoss
-
-        print('[%d/%d][%d/%d] MSE-Loss: %.4f | KLDiv-Loss: %.4f | Total-Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(val_loader)-1, mseLoss.mean().data[0],
-              klLoss.mean().data[0], loss.mean().data[0]))
+        print('[%d/%d][%d/%d] Total-Loss: %.4f'
+              % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
 
         utils.displayReconSamples(img, gen, use_gpu)
 

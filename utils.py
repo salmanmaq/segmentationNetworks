@@ -333,3 +333,55 @@ def reverseReconOneHot(R_batch, G_batch, B_batch):
             img = concatenated
 
     return img
+
+################ Gray Segmentation Reconstruction Utilities ###############
+
+def reverseReconOneHotGray(batch):
+    '''
+        Generates the reconstructed image from the output of a Reconstruction
+        network.
+        Takes a batch of numpy one-hot tensors channels and returns a batch of
+        numpy images in as the same output concatenated three time to represent
+        RGB.
+    '''
+    # Iterate over all images in a batch
+    for i in range(len(batch)):
+        c = np.expand_dims(np.argmax(R_batch[i,:,:], axis=0), axis=0)
+
+        concatenated = np.concatenate((c, c, c), axis=0)
+
+        if 'img' in locals():
+            img = np.concatenate((img, concatenated), axis=0)
+        else:
+            img = concatenated
+
+    return img
+
+def displayReconSamplesGray(img, gen, use_gpu):
+    ''' Display the original and the reconstructed image.
+        If a batch is used, it displays only the first image in the batch.
+
+        Args:
+            input image, R-channel output, G-channel output, B-channel output,
+            use_gpu
+    '''
+
+    if use_gpu:
+        img = img.cpu()
+        gen = gen.cpu()
+
+    gen = gen.data.numpy()
+    gen = reverseReconOneHotGray(gen)
+    gen = np.transpose(np.squeeze(gen[0,:,:,:]), (1,2,0))
+    gen = cv2.cvtColor(gen, cv2.COLOR_BGR2RGB)
+
+    img = img.data.numpy()
+    img = np.transpose(np.squeeze(img[0,:,:,:]), (1,2,0))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    stacked = np.concatenate((img, gen), axis = 1)
+
+    cv2.namedWindow('Input | Generated', cv2.WINDOW_NORMAL)
+    cv2.imshow('Input | Generated', stacked)
+
+    cv2.waitKey(1)
