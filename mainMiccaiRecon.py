@@ -95,8 +95,7 @@ def main():
     }
 
     # Data Loading
-    #data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/m2cai16-tool/train_dataset'
-    data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/miccai_all_images_small'
+    data_dir = '/media/salman/DATA/NUST/MS RIME/Thesis/MICCAI Dataset/m2cai16-tool/train_dataset'
 
     image_datasets = {x: miccaiDataset(os.path.join(data_dir, x), data_transforms[x])
                         for x in ['train', 'test']}
