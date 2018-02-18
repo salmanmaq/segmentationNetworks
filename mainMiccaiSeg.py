@@ -18,6 +18,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 import torch.utils.data
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
 import utils
 from model.segnet import SegNet
@@ -70,19 +71,6 @@ def main():
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
-    # Optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            #optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.evaluate, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
     cudnn.benchmark = True
 
     data_transforms = {
@@ -133,6 +121,28 @@ def main():
     # Initialize the model
     model = SegNet(args.bnMomentum, classes)
 
+    # Optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            #args.start_epoch = checkpoint['epoch']
+            pretrained_dict = checkpoint['state_dict']
+            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model.state_dict()}
+            model.state_dict().update(pretrained_dict)
+            model.load_state_dict(model.state_dict())
+            print("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
+        # Freeze the encoder weights
+        for param in model.encoder.parameters():
+            param.requires_grad = False
+
+        optimizer = optim.Adam(model.decoder.parameters(), lr = args.lr)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr = args.lr)
+
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
 
@@ -140,14 +150,11 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    optimizer = optim.Adam(model.parameters(), lr = args.lr)
-
-    if args.evaluate:
-        validate(dataloaders['test'], model, criterion)
-        return
-
     for epoch in range(args.start_epoch, args.epochs):
         #adjust_learning_rate(optimizer, epoch)
+
+        if args.evaluate:
+            validate(dataloaders['test'], model, criterion, epoch, key)
 
         # Train for one epoch
         print('>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<')
@@ -156,20 +163,13 @@ def main():
         # Evaulate on validation set
 
         print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
-        prec1 = validate(dataloaders['test'], model, criterion, epoch, key)
-        # prec1 = prec1.cpu().data.numpy()
-        #
-        # # Remember best prec1 and save checkpoint
-        # print(prec1)
-        # print(best_prec1)
-        # is_best = prec1 < best_prec1
-        # best_prec1 = min(prec1, best_prec1)
-        # save_checkpoint({
-        #     'epoch': epoch + 1,
-        #     'state_dict': model.state_dict(),
-        #     'best_prec1': best_prec1,
-        #     #'optimizer': optimizer.state_dict(),
-        # }, is_best, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
+        validate(dataloaders['test'], model, criterion, epoch, key)
+
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
 def train(train_loader, model, criterion, optimizer, epoch, key):
     '''
@@ -241,9 +241,7 @@ def validate(val_loader, model, criterion, epoch, key):
         utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
                              i, args.save_dir)
 
-    return loss
-
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
     '''
         Save the training model
     '''
