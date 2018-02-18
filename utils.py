@@ -43,8 +43,7 @@ def displaySamples(img, generated, gt, use_gpu, key, save, epoch, imageNum,
         save_path = os.path.join(save_dir, file_name)
         cv2.imwrite(save_path, stacked*255)
 
-    cv2.namedWindow('Input | Gen | GT' %(epoch, imageNum),
-                    cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Input | Gen | GT', cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Gen | GT', stacked)
 
     cv2.waitKey(1)

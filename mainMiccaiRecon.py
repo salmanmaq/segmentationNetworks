@@ -64,18 +64,6 @@ def main():
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
-    # Optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.evaluate, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
     cudnn.benchmark = True
 
     data_transforms = {
@@ -110,6 +98,17 @@ def main():
     # Initialize the model
     model = ReconNet(args.bnMomentum)
 
+    # Optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            model.load_state_dict(checkpoint['state_dict'])
+            print("=> loaded checkpoint '{}' (epoch {})".format(args.evaluate, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
     # Define loss function (criterion) and optimizer
     criterion = nn.L1Loss()
 
@@ -138,7 +137,7 @@ def main():
         save_checkpoint({
             'epoch': epoch + 1,
             'state_dict': model.state_dict(),
-            #'optimizer': optimizer.state_dict(),
+            'optimizer': optimizer.state_dict(),
         }, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
 def train(train_loader, model, criterion, optimizer, epoch):
