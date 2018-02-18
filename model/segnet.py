@@ -71,7 +71,7 @@ class decoder(nn.Module):
             nn.ReLU(True),
 
             # TODO: num_classes = 19 is hard-coded below. Change that.
-            nn.ConvTranspose2d(64, 19, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(64, 9, 4, 2, 1, bias=False),
             nn.Softmax(dim=1)
         )
 

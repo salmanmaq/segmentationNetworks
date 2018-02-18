@@ -44,6 +44,12 @@
     },
     {
       "id": "7",
+      "name": "artery",
+      "color": "[170,0,255]",
+      "super-category": "artery"
+    },
+    {
+      "id": "8",
       "name": "black",
       "color": "[0,0,0]",
       "super-category": "misc"
