@@ -119,7 +119,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr = args.lr)
 
     if args.evaluate:
-        validate(dataloaders['test'], model, criterion)
+        validate(dataloaders['test'], model, criterion, 0)
         return
 
     for epoch in range(args.start_epoch, args.epochs):

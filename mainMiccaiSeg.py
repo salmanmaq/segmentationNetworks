@@ -150,11 +150,11 @@ def main():
         model.cuda()
         criterion.cuda()
 
+    if args.evaluate:
+        validate(dataloaders['test'], model, criterion, 0, key)
+
     for epoch in range(args.start_epoch, args.epochs):
         #adjust_learning_rate(optimizer, epoch)
-
-        if args.evaluate:
-            validate(dataloaders['test'], model, criterion, epoch, key)
 
         # Train for one epoch
         print('>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<')
