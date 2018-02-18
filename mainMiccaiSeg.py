@@ -35,6 +35,8 @@ parser.add_argument('--batchSize', default=4, type=int,
             help='Mini-batch size (default: 4)')
 parser.add_argument('--lr', '--learning-rate', default=0.05, type=float,
             metavar='LR', help='initial learning rate')
+parser.add_argument('--wd', '--weight_dacay', default=0.0005, type=float,
+            help='initial learning rate')
 parser.add_argument('--bnMomentum', default=0.1, type=float,
             help='Batch Norm Momentum (default: 0.1)')
 parser.add_argument('--imageSize', default=256, type=int,
@@ -47,8 +49,6 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
             help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
             help='evaluate model on validation set')
-parser.add_argument('--pre-trained', dest='pretrained', action='store_true',
-            help='use pre-trained model')
 parser.add_argument('--save-dir', dest='save_dir',
             help='The directory used to save the trained models',
             default='save_temp', type=str)
@@ -61,6 +61,7 @@ use_gpu = torch.cuda.is_available()
 def main():
     global args, best_prec1
     args = parser.parse_args()
+    print(args)
 
     if args.saveTest == 'True':
         args.saveTest = True
@@ -99,9 +100,9 @@ def main():
     }
 
     # Data Loading
-    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegRefined'
+    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrgans'
     # json path for class definitions
-    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegClasses.json'
+    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrganClasses.json'
 
     image_datasets = {x: miccaiSegDataset(os.path.join(data_dir, x), data_transforms[x],
                         json_path) for x in ['train', 'trainval', 'test']}
@@ -135,13 +136,13 @@ def main():
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
-        # Freeze the encoder weights
-        for param in model.encoder.parameters():
-            param.requires_grad = False
+        # # Freeze the encoder weights
+        # for param in model.encoder.parameters():
+        #     param.requires_grad = False
 
-        optimizer = optim.Adam(model.decoder.parameters(), lr = args.lr)
+        optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
     else:
-        optimizer = optim.Adam(model.parameters(), lr = args.lr)
+        optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
 
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -183,8 +184,8 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
     for i, (img, gt) in enumerate(train_loader):
 
         # For TenCrop Data Augmentation
-        img = img.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
-        gt = gt.view(args.batchSize*10,3,args.resizedImageSize,args.resizedImageSize)
+        img = img.view(-1,3,args.resizedImageSize,args.resizedImageSize)
+        gt = gt.view(-1,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
         gt_temp = gt * 255
