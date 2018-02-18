@@ -1,0 +1,52 @@
+{
+  "classes": [
+    {
+      "id": "0",
+      "name": "unknown",
+      "color": "[170,0,85]",
+      "super-category": "misc"
+    },
+    {
+      "id": "1",
+      "name": "instruments",
+      "color": "[0,85,170]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "2",
+      "name": "liver",
+      "color": "[85,170,0]",
+      "super-category": "organ"
+    },
+    {
+      "id": "3",
+      "name": "gall-bladder",
+      "color": "[85,170,255]",
+      "super-category": "organ"
+    },
+    {
+      "id": "4",
+      "name": "fat",
+      "color": "[85,255,0]",
+      "super-category": "organ"
+    },
+    {
+      "id": "5",
+      "name": "upperwall",
+      "color": "[85,255,170]",
+      "super-category": "organ"
+    },
+    {
+      "id": "6",
+      "name": "intestine",
+      "color": "[255,0,255]",
+      "super-category": "organ"
+    },
+    {
+      "id": "7",
+      "name": "black",
+      "color": "[0,0,0]",
+      "super-category": "misc"
+    }
+  ]
+}
