@@ -79,15 +79,7 @@ def main():
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.TenCrop(args.resizedImageSize),
             transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
-            #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
-            #transforms.RandomHorizontalFlip(),
-            #transforms.RandomVerticalFlip(),
-            #transforms.ToTensor(),
-        ]),
-        'trainval': transforms.Compose([
-            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
-            transforms.TenCrop(args.resizedImageSize),
-            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
+            #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182]
             #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
             #transforms.RandomHorizontalFlip(),
             #transforms.RandomVerticalFlip(),
@@ -96,6 +88,7 @@ def main():
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
+            #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182]
         ]),
     }
 
@@ -105,14 +98,14 @@ def main():
     json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrganClasses.json'
 
     image_datasets = {x: miccaiSegDataset(os.path.join(data_dir, x), data_transforms[x],
-                        json_path) for x in ['train', 'trainval', 'test']}
+                        json_path) for x in ['train', 'test']}
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                   batch_size=args.batchSize,
                                                   shuffle=True,
                                                   num_workers=args.workers)
-                  for x in ['train', 'trainval', 'test']}
-    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'trainval', 'test']}
+                  for x in ['train', 'test']}
+    dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 
     # Get the dictionary for the id and RGB value pairs for the dataset
     classes = image_datasets['train'].classes
@@ -144,8 +137,11 @@ def main():
     else:
         optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
 
-    # Define loss function (criterion) and optimizer
+    # Define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
+
+    # Use a learning rate scheduler
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
     if use_gpu:
         model.cuda()
@@ -160,7 +156,7 @@ def main():
 
         # Train for one epoch
         print('>>>>>>>>>>>>>>>>>>>>>>>Training<<<<<<<<<<<<<<<<<<<<<<<')
-        train(dataloaders['train'], model, criterion, optimizer, epoch, key)
+        train(dataloaders['train'], model, criterion, optimizer, scheduler, epoch, key)
 
         # Evaulate on validation set
 
@@ -173,7 +169,7 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, filename=os.path.join(args.save_dir, 'checkpoint_{}.tar'.format(epoch)))
 
-def train(train_loader, model, criterion, optimizer, epoch, key):
+def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
     '''
         Run one training epoch
     '''
@@ -205,6 +201,8 @@ def train(train_loader, model, criterion, optimizer, epoch, key):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        scheduler.step(loss.mean().data[0])
 
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
