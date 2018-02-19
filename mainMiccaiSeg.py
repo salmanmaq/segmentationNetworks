@@ -88,7 +88,7 @@ def main():
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
-            transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182])
+            #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182])
         ]),
     }
 
@@ -137,6 +137,8 @@ def main():
     else:
         optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
 
+    print(model)
+
     # Define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
 
@@ -182,7 +184,6 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         # For TenCrop Data Augmentation
         img = img.view(-1,3,args.resizedImageSize,args.resizedImageSize)
         img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
-        print(img.shape)
         gt = gt.view(-1,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
@@ -197,7 +198,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = criterion(seg, label)
+        loss = model.dice_loss(seg, label)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
@@ -224,7 +225,7 @@ def validate(val_loader, model, criterion, epoch, key):
     for i, (img, gt) in enumerate(val_loader):
 
         # Process the network inputs and outputs
-        img = utils.normalize(img, torch.Tesnor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
+        img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
         gt_temp = gt * 255
         label = utils.generateLabel4CE(gt_temp, key)
 
@@ -236,7 +237,7 @@ def validate(val_loader, model, criterion, epoch, key):
 
         # Compute output
         seg = model(img)
-        loss = criterion(seg, label)
+        loss = model.dice_loss(seg, label)
 
         print('[%d/%d][%d/%d] Loss: %.4f'
               % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
