@@ -78,8 +78,8 @@ def main():
         'train': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.TenCrop(args.resizedImageSize),
-            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))
-            #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182]
+            transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
+            #transforms.Lambda(lambda normalized: torch.stack([transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182])(crop) for crop in normalized]))
             #transforms.RandomResizedCrop(224, interpolation=Image.NEAREST),
             #transforms.RandomHorizontalFlip(),
             #transforms.RandomVerticalFlip(),
@@ -88,7 +88,7 @@ def main():
         'test': transforms.Compose([
             transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
-            #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182]
+            transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182])
         ]),
     }
 
@@ -181,6 +181,8 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
 
         # For TenCrop Data Augmentation
         img = img.view(-1,3,args.resizedImageSize,args.resizedImageSize)
+        img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
+        print(img.shape)
         gt = gt.view(-1,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
@@ -222,6 +224,7 @@ def validate(val_loader, model, criterion, epoch, key):
     for i, (img, gt) in enumerate(val_loader):
 
         # Process the network inputs and outputs
+        img = utils.normalize(img, torch.Tesnor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
         gt_temp = gt * 255
         label = utils.generateLabel4CE(gt_temp, key)
 

@@ -249,6 +249,25 @@ def labelToImage(label, key):
 
     return gen
 
+def normalize(batch, mean, std):
+    '''
+        Normalizes a batch of images, provided the per-channel mean and
+        standard deviation.
+    '''
+
+    mean.unsqueeze_(1).unsqueeze_(1)
+    std.unsqueeze_(1).unsqueeze_(1)
+    for i in range(len(batch)):
+        img = batch[i,:,:,:]
+        img = img.sub(mean).div(std).unsqueeze(0)
+
+        if 'concat' in locals():
+            concat = torch.cat((concat, img), 0)
+        else:
+            concat = img
+
+    return concat
+
 #################### Reconstruction Utilities ######################
 
 def generateLabels4ReconCE(batch):
