@@ -70,8 +70,7 @@ class decoder(nn.Module):
             nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            # TODO: num_classes = 19 is hard-coded below. Change that.
-            nn.ConvTranspose2d(64, 9, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False),
             nn.Softmax(dim=1)
         )
 
