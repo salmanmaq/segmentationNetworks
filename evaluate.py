@@ -68,34 +68,31 @@ def main():
     # json path for class definitions
     json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrganClasses.json'
 
-    image_dataset = miccaiSegDataset(os.path.join(data_dir, test), data_transforms[x],
+    image_dataset = miccaiSegDataset(os.path.join(data_dir, 'test'), data_transform,
                         json_path)
 
-    dataloader = torch.utils.data.DataLoader(image_datasets[x],
+    dataloader = torch.utils.data.DataLoader(image_dataset,
                                                   batch_size=args.batchSize,
                                                   shuffle=True,
                                                   num_workers=args.workers)
 
     # Get the dictionary for the id and RGB value pairs for the dataset
-    classes = image_datasets['train'].classes
+    classes = image_dataset.classes
     key = utils.disentangleKey(classes)
     num_classes = len(key)
 
     # Initialize the model
-    model = SegNet(args.bnMomentum, classes)
+    model = SegNet(args.bnMomentum, num_classes)
 
     # Load the saved model
     if os.path.isfile(args.model):
-        print("=> loading checkpoint '{}'".format(args.resume))
-        checkpoint = torch.load(args.resume)
-        #args.start_epoch = checkpoint['epoch']
-        pretrained_dict = checkpoint['state_dict']
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model.state_dict()}
-        model.state_dict().update(pretrained_dict)
-        model.load_state_dict(model.state_dict())
+        print("=> loading checkpoint '{}'".format(args.model))
+        checkpoint = torch.load(args.model)
+        args.start_epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state_dict'])
         print("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
     else:
-        print("=> no checkpoint found at '{}'".format(args.resume))
+        print("=> no checkpoint found at '{}'".format(args.model))
 
     print(model)
 
@@ -107,18 +104,19 @@ def main():
         criterion.cuda()
 
     # Initialize an evaluation Object
-    evaluator = utils.evaulate(key, use_gpu)
+    evaluator = utils.Evaluate(key, use_gpu)
 
     # Evaulate on validation/test set
     print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
-    validate(dataloaders['test'], model, criterion, key)
+    validate(dataloader, model, criterion, key, evaluator)
 
     # Calculate the IoU metrics
     print('>>>>>>>>>>>>>>>>>> Evaluating the Metrics <<<<<<<<<<<<<<<<<')
-    mIoU, classIoU = evaluator.getIoU()
-    print('Mean IoU: %s, Class-wise IoU: %s') % (mIoU, classIoU)
+    IoU = evaluator.getIoU()
 
-def validate(val_loader, model, criterion, key):
+    print('Mean IoU: {}, Class-wise IoU: {}'.format(torch.mean(IoU), IoU))
+
+def validate(val_loader, model, criterion, key, evaluator):
     '''
         Run evaluation
     '''
@@ -144,13 +142,13 @@ def validate(val_loader, model, criterion, key):
         seg = model(img)
         loss = model.dice_loss(seg, label)
 
-        print('[%d/%d][%d/%d] Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
+        print('[%d/%d] Loss: %.4f'
+              % (i, len(val_loader)-1, loss.mean().data[0]))
 
-        utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
+        utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, 0,
                              i, args.save_dir)
 
-        utils.addBatch(seg, oneHotGT)
+        evaluator.addBatch(seg, oneHotGT)
 
 if __name__ == '__main__':
     main()
