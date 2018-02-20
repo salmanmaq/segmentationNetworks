@@ -402,4 +402,69 @@ def displayReconSamplesGray(img, gen, use_gpu):
     cv2.namedWindow('Input | Generated', cv2.WINDOW_NORMAL)
     cv2.imshow('Input | Generated', stacked)
 
-    cv2.waitKey(1)
+    cv2.waitKey(1
+
+########################### Evaluation Utilities ##############################
+
+class evaulate(Object):
+    '''
+        Returns the mean IoU over the entire test set
+
+        Code apapted from:
+        https://github.com/Eromera/erfnet_pytorch/blob/master/eval/iouEval.py
+    '''
+
+    def __init__(self, key, use_gpu):
+        self.num_classes = num_classes
+        self.key = key
+        self.use_gpu = use_gpu
+        self.reset()
+
+    def reset(self):
+        self.tp = 0
+        self.fp = 0
+        self.fn = 0
+
+    def addBatch(self, seg, gt):
+        '''
+            Add a batch of generated segmentation tensors and the respective
+            groundtruth tensors.
+            Dimensions should be:
+            Seg: batch_size * num_classes * H * W
+            GT: batch_size * num_classes * H * W
+            GT should be one-hot encoded and Seg should be the softmax output.
+            Seg would be converted to oneHot inside this method.
+        '''
+
+        if not self.use_gpu:
+            seg = seg.cuda()
+            gt = gt.cuda()
+
+        # Convert Seg to one-hot encoding
+        seg = convertToOneHot(seg)
+
+        tpmult = seg * gt    #times prediction and gt coincide is 1
+        tp = torch.sum(torch.sum(torch.sum(tpmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
+        fpmult = seg * (1-gt) #times prediction says its that class and gt says its not
+        fp = torch.sum(torch.sum(torch.sum(fpmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
+        fnmult = (1-seg) * (gt) #times prediction says its not that class and gt says it is
+        fn = torch.sum(torch.sum(torch.sum(fnmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
+
+        self.tp += tp.double().cpu()
+        self.fp += fp.double().cpu()
+        self.fn += fn.double().cpu()
+
+    def getIoU(self):
+        num = self.tp
+        den = self.tp + self.fp + self.fn + 1e-15
+        iou = num / den
+        return torch.mean(iou), iou     #returns "iou mean", "iou per class"
+
+def convertToOneHot(batch):
+    '''
+        Converts the network output from softmax to one-hot encoding.
+    '''
+
+    oneHot = torch.max(batch, dim=1, keepdim=True)
+
+    return oneHot
