@@ -1,8 +1,8 @@
 """
-PyTorch implementation of
+This is not an implementation for
 SegNet: A Deep Convolutional Encoder-Decoder Architecture for Image Segmentation
 
-https://arxiv.org/abs/1511.00561
+I'll change the file names later
 """
 
 
