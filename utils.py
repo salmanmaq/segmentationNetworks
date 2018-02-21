@@ -94,8 +94,6 @@ def convertToOneHot(batch, use_gpu):
         for k in range(batch.shape[1]):
             mask = idxs == k
             mask = np.expand_dims(mask, axis=0)
-            print(mask.shape)
-            print(single.shape)
             single = np.concatenate((single, mask), axis=0)
 
         single = np.expand_dims(single[1:,:,:], axis=0)
