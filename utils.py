@@ -18,15 +18,13 @@ class Evaluate():
         https://github.com/Eromera/erfnet_pytorch/blob/master/eval/iouEval.py
     '''
 
-    def __init__(self, key, use_gpu, ignore_index=8):
+    def __init__(self, key, use_gpu):
         self.num_classes = len(key)
         self.key = key
         self.use_gpu = use_gpu
-        self.ignoreIndex = ignoreIndex if num_classes > ignoreIndex else -1
         self.reset()
 
     def reset(self):
-        classes = self.num_classes if self.ignoreIndex==-1 else self.num_classes-1
         self.tp = 0
         self.fp = 0
         self.fn = 0
@@ -44,18 +42,12 @@ class Evaluate():
 
         # Convert Seg to one-hot encoding
         seg = convertToOneHot(seg, self.use_gpu).byte()
-        gt = gt.byte()
+        seg = seg.float()
+        gt = gt.float()
 
         if not self.use_gpu:
             seg = seg.cuda()
             gt = gt.cuda()
-
-        if (self.ignoreIndex != -1):
-            ignores = y_onehot[:,self.ignoreIndex].unsqueeze(1)
-            x_onehot = x_onehot[:, :self.ignoreIndex]
-            y_onehot = y_onehot[:, :self.ignoreIndex]
-        else:
-            ignores=0
 
         tpmult = seg * gt    #times prediction and gt coincide is 1
         tp = torch.sum(torch.sum(torch.sum(tpmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
@@ -64,6 +56,7 @@ class Evaluate():
         fnmult = (1-seg) * (gt) #times prediction says its not that class and gt says it is
         fn = torch.sum(torch.sum(torch.sum(fnmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
 
+        #print('{},{},{},{}'.format(tpmult,tp,fp,fn))
         self.tp += tp.double().cpu()
         self.fp += fp.double().cpu()
         self.fn += fn.double().cpu()
@@ -74,6 +67,13 @@ class Evaluate():
         iou = num / den
         return iou     #returns "iou per class"
 
+    def getPRF1(self):
+        precision = self.tp / (self.tp + self.fp + 1e-15)
+        recall = self.tp / (self.tp + self.fn + 1e-15)
+        f1 = (2 * precision * recall) / (precision + recall + 1e-15)
+
+        return precision, recall, f1
+
 def convertToOneHot(batch, use_gpu):
     '''
         Converts the network output from softmax to one-hot encoding.
@@ -83,7 +83,7 @@ def convertToOneHot(batch, use_gpu):
         batch = batch.cpu()
 
     batch = batch.data.numpy()
-    mask = np.zeros([1, batch.shape[2], batch.shape[3]])
+    single = np.zeros([1, batch.shape[2], batch.shape[3]])
 
     # Iterate over all images in a batch
     for i in range(len(batch)):
@@ -94,9 +94,9 @@ def convertToOneHot(batch, use_gpu):
         for k in range(batch.shape[1]):
             mask = idxs == k
             mask = np.expand_dims(mask, axis=0)
-            mask = np.concatenate((mask, mask), axis=0)
+            single = np.concatenate((single, mask), axis=0)
 
-        single = np.expand_dims(mask[1:,:,:], axis=0)
+        single = np.expand_dims(single[1:,:,:], axis=0)
         if 'oneHot' in locals():
             oneHot = np.concatenate((oneHot, single), axis=0)
         else:

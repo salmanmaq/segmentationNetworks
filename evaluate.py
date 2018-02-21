@@ -113,8 +113,12 @@ def main():
     # Calculate the IoU metrics
     print('>>>>>>>>>>>>>>>>>> Evaluating the Metrics <<<<<<<<<<<<<<<<<')
     IoU = evaluator.getIoU()
-
     print('Mean IoU: {}, Class-wise IoU: {}'.format(torch.mean(IoU), IoU))
+    PRF1 = evaluator.getPRF1()
+    precision, recall, F1 = PRF1[0], PRF1[1], PRF1[2]
+    print('Mean Precision: {}, Class-wise Precision: {}'.format(torch.mean(precision), precision))
+    print('Mean Recall: {}, Class-wise Recall: {}'.format(torch.mean(recall), recall))
+    print('Mean F1: {}, Class-wise F1: {}'.format(torch.mean(F1), F1))
 
 def validate(val_loader, model, criterion, key, evaluator):
     '''
