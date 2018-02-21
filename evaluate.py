@@ -110,7 +110,7 @@ def main():
     print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
     validate(dataloader, model, criterion, key, evaluator)
 
-    # Calculate the IoU metrics
+    # Calculate the metrics
     print('>>>>>>>>>>>>>>>>>> Evaluating the Metrics <<<<<<<<<<<<<<<<<')
     IoU = evaluator.getIoU()
     print('Mean IoU: {}, Class-wise IoU: {}'.format(torch.mean(IoU), IoU))

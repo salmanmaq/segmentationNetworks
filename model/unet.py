@@ -25,9 +25,9 @@ class ConvBlock(nn.Module):
         return x
 
 
-class Unet(nn.Module):
+class UNet(nn.Module):
     def __init__(self, num_classes):
-        super(Unet, self).__init__()
+        super(UNet, self).__init__()
         self.pool1 = nn.MaxPool2d(kernel_size=2)
         self.pool2 = nn.MaxPool2d(kernel_size=2)
         self.pool3 = nn.MaxPool2d(kernel_size=2)
@@ -38,7 +38,7 @@ class Unet(nn.Module):
         self.up3 = nn.Upsample(scale_factor=2, mode='nearest')
         self.up4 = nn.Upsample(scale_factor=2, mode='nearest')
 
-        self.conv1 = ConvBlock(1, 32)
+        self.conv1 = ConvBlock(3, 32)
         self.conv2 = ConvBlock(32, 64)
         self.conv3 = ConvBlock(64, 128)
         self.conv4 = ConvBlock(128, 256)
@@ -50,7 +50,7 @@ class Unet(nn.Module):
         self.conv8 = ConvBlock(192, 64)
         self.conv9 = ConvBlock(96, 32)
 
-        self.conv10 = nn.Conv2d(num_classes, 1, 1)
+        self.conv10 = nn.Conv2d(32, num_classes, 1)
 
     def forward(self, x):
         c1 = self.conv1(x)
