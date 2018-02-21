@@ -83,17 +83,19 @@ def convertToOneHot(batch, use_gpu):
         batch = batch.cpu()
 
     batch = batch.data.numpy()
-    single = np.zeros([1, batch.shape[2], batch.shape[3]])
 
     # Iterate over all images in a batch
     for i in range(len(batch)):
         vec = batch[i,:,:,:]
         idxs = np.argmax(vec, axis=0)
 
+        single = np.zeros([1, batch.shape[2], batch.shape[3]])
         # Iterate over all the key-value pairs in the class Key dict
         for k in range(batch.shape[1]):
             mask = idxs == k
             mask = np.expand_dims(mask, axis=0)
+            print(mask.shape)
+            print(single.shape)
             single = np.concatenate((single, mask), axis=0)
 
         single = np.expand_dims(single[1:,:,:], axis=0)
