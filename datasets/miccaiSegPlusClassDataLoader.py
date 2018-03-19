@@ -56,6 +56,7 @@ class miccaiSegPlusClassDataset(Dataset):
         frm_number = int(img_name.split('/')[-1])
         corresponding_entry = self.ann_list[ann_file_name] == frm_number
         presense_vector = self.ann_list[ann_file_name][corresponding_entry]
+        presense_vector = presense_vector[1:]
 
         if self.transform:
             image = self.transform(image)
