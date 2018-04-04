@@ -26,6 +26,12 @@ from model.segnetPlusClass import segnetPlusClass
 from datasets.miccaiSegPlusClassDataLoader import miccaiSegPlusClassDataset
 
 # TODO: Complete this implementation
+#       Use a Binary CrossEntropyLoss for classification
+#       The dataloader may need some chnages too since the current dataloader
+#       only loads the image and the tool presence vector.
+#       For training, we also need the segmented image so we need to modify the
+#       dataloader as well.
+#       The current dataloader is well suited for evaluation but not training.
 
 parser = argparse.ArgumentParser(description='PyTorch SegNet Training')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
@@ -221,8 +227,8 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
             label = label.cuda()
 
         # Compute output
-        seg = model(img)
-        loss = model.dice_loss(seg, label)
+        classified, segmented = model(img)
+        loss = model.dice_loss(segmented, label)
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
