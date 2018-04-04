@@ -52,10 +52,6 @@ class decoder(nn.Module):
 
     def __init__(self, batchNorm_momentum, num_classes=19):
         super(decoder, self).__init__()
-        self.CT1 = nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=True)
-        self.BN1 = nn.BatchNorm2d(1024, 512, 4, 1, 0, bias=True)
-        #TODO: Convert the Sequential implementation to a functional one,
-        # with a classification head for classification
         self.main = nn.Sequential(
             nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False),
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
@@ -79,10 +75,14 @@ class decoder(nn.Module):
             nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False),
             nn.Softmax(dim=1)
         )
+        self.fc = nn.Linear(64*64*num_classes, 7, bias=True)
+        self.smax = nn.Softmax(dim=1)
 
     def forward(self, input):
-        output = self.main(input)
-        return output
+        seq_output = self.main(input)
+        classified = self.fc(seq_output)
+        segmented = self.smax(seq_output)
+        return classified, segmented
 
 class segnetPlusClass(nn.Module):
     '''
@@ -98,9 +98,9 @@ class segnetPlusClass(nn.Module):
         latent = self.encoder(x)
         print('Latent Shape')
         print(latent.shape)
-        output = self.decoder(latent)
+        classified, seg = self.decoder(latent)
 
-        return output
+        return classified, segmented
 
     def dice_loss(self, output, target, weights=None, ignore_index=None):
         '''
