@@ -25,14 +25,6 @@ import utils
 from model.segnetPlusClass import segnetPlusClass
 from datasets.miccaiSegPlusClassDataLoader import miccaiSegPlusClassDataset
 
-# TODO: Complete this implementation
-#       Use a Binary CrossEntropyLoss for classification
-#       The dataloader may need some chnages too since the current dataloader
-#       only loads the image and the tool presence vector.
-#       For training, we also need the segmented image so we need to modify the
-#       dataloader as well.
-#       The current dataloader is well suited for evaluation but not training.
-
 parser = argparse.ArgumentParser(description='PyTorch SegNet Training')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
             help='number of data loading workers (default: 4)')
