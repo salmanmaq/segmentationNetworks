@@ -159,7 +159,7 @@ def main():
     print(model)
 
     # Define loss function (criterion)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCELoss()
 
     # Use a learning rate scheduler
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
@@ -208,37 +208,41 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
     # Switch to train mode
     model.train()
 
-    for i, (img, gt) in enumerate(train_loader):
+    for i, (img, seg_gt, class_gt) in enumerate(train_loader):
 
         # For TenCrop Data Augmentation
         img = img.view(-1,3,args.resizedImageSize,args.resizedImageSize)
         img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
-        gt = gt.view(-1,3,args.resizedImageSize,args.resizedImageSize)
+        seg_gt = seg_gt.view(-1,3,args.resizedImageSize,args.resizedImageSize)
 
         # Process the network inputs and outputs
-        gt_temp = gt * 255
-        label = utils.generateLabel4CE(gt_temp, key)
+        gt_temp = seg_gt * 255
+        seg_label = utils.generateLabel4CE(gt_temp, key)
         oneHotGT = utils.generateOneHot(gt_temp, key)
 
-        img, label = Variable(img), Variable(label)
+        img, seg_label, class_label = Variable(img), Variable(label), Variable(class_gt)
 
         if use_gpu:
             img = img.cuda()
-            label = label.cuda()
+            seg_label = seg_label.cuda()
+            class_label = class_label.cuda()
 
         # Compute output
         classified, segmented = model(img)
-        loss = model.dice_loss(segmented, label)
+        seg_loss = model.dice_loss(segmented, seg_label)
+        class_loss = criterion(classified, class_label)
+        total_loss = seg_loss + class_loss
 
         # Compute gradient and do SGD step
         optimizer.zero_grad()
-        loss.backward()
+        total_loss.backward()
         optimizer.step()
 
-        scheduler.step(loss.mean().data[0])
+        scheduler.step(total_loss.mean().data[0])
 
-        print('[%d/%d][%d/%d] Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(train_loader)-1, loss.mean().data[0]))
+        print('[%d/%d][%d/%d] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
+            args.epochs-1, i, len(train_loader)-1, total_loss.mean().data[0],
+            seg_loss.mean().data[0], class_loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key, False, epoch,
                              i, args.save_dir)
@@ -251,26 +255,30 @@ def validate(val_loader, model, criterion, epoch, key, evaluator):
     # Switch to evaluate mode
     model.eval()
 
-    for i, (img, gt) in enumerate(val_loader):
+    for i, (img, seg_gt, class_gt) in enumerate(val_loader):
 
         # Process the network inputs and outputs
         img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
-        gt_temp = gt * 255
-        label = utils.generateLabel4CE(gt_temp, key)
+        gt_temp = seg_gt * 255
+        seg_label = utils.generateLabel4CE(gt_temp, key)
         oneHotGT = utils.generateOneHot(gt_temp, key)
 
-        img, label = Variable(img), Variable(label)
+        img, seg_label, class_label = Variable(img), Variable(label), Variable(class_gt)
 
         if use_gpu:
             img = img.cuda()
-            label = label.cuda()
+            seg_label = seg_label.cuda()
+            class_label = class_label.cuda()
 
         # Compute output
-        seg = model(img)
-        loss = model.dice_loss(seg, label)
+        classified, segmented = model(img)
+        seg_loss = model.dice_loss(segmented, seg_label)
+        class_loss = criterion(classified, class_label)
+        total_loss = seg_loss + class_loss
 
-        print('[%d/%d][%d/%d] Loss: %.4f'
-              % (epoch, args.epochs-1, i, len(val_loader)-1, loss.mean().data[0]))
+        print('[%d/%d][%d/%d] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
+            args.epochs-1, i, len(val_loader)-1, total_loss.mean().data[0],
+            seg_loss.mean().data[0], class_loss.mean().data[0]))
 
         utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
                              i, args.save_dir)
