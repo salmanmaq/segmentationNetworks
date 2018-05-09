@@ -50,7 +50,7 @@ class decoder(nn.Module):
         Decoder for the Segmentation and Classification Network
     '''
 
-    def __init__(self, batchNorm_momentum, num_classes=19):
+    def __init__(self, batchNorm_momentum, img_size, num_classes=19):
         super(decoder, self).__init__()
         self.main = nn.Sequential(
             nn.ConvTranspose2d(1024, 512, 4, 1, 0, bias=False),
@@ -72,10 +72,10 @@ class decoder(nn.Module):
             nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False),
-            nn.Softmax(dim=1)
+            nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False)
         )
-        self.fc = nn.Linear(64*64*num_classes, 7, bias=True)
+
+        self.fc = nn.Conv2d(19, 7, img_size, bias=True)
         self.smax = nn.Softmax(dim=1)
 
     def forward(self, input):
@@ -89,16 +89,14 @@ class segnetPlusClass(nn.Module):
         Segnet network
     '''
 
-    def __init__(self, batchNorm_momentum, num_classes):
-        super(SegNet, self).__init__()
+    def __init__(self, batchNorm_momentum, img_size, num_classes):
+        super(segnetPlusClass, self).__init__()
         self.encoder = encoder(batchNorm_momentum)
-        self.decoder = decoder(batchNorm_momentum, num_classes)
+        self.decoder = decoder(batchNorm_momentum, img_size, num_classes)
 
     def forward(self, x):
         latent = self.encoder(x)
-        print('Latent Shape')
-        print(latent.shape)
-        classified, seg = self.decoder(latent)
+        classified, segmented = self.decoder(latent)
 
         return classified, segmented
 

@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 import math
 import os
+import json
 
 ########################### Evaluation Utilities ##############################
 
@@ -267,34 +268,25 @@ def generateToolPresenceVector(gt):
         from that image.
     '''
 
-    # TODO: Complete this implementation
-
     # Disentangle the classes to a Python dict
     # We only use the MICCAI classes here since we need to do tool classification
     json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiClasses.json'
     classes_key = json.load(open(json_path))['classes']
     key = disentangleKey(classes_key)
 
-    gt = np.array(gt)
-    # Iterate over all images in a batch
-    for i in range(len(batch)):
-        img = batch[i,:,:,:]
-        imgSize = img.shape[1] * img.shape[2]
-        img = np.transpose(img, (1,2,0))
-        presence = np.zeros(7)
+    img = np.array(gt)
 
-        # Iterate over all the key-value pairs in the class Key dict
-        for k in range(len(key)):
-            rgb = key[k]
-            mask = np.where(np.all(img == rgb, axis = -1))
-            presence[k] = 1
+    imgSize = img.shape[1] * img.shape[2]
+    img = np.transpose(img, (1,2,0))
+    presence = np.zeros(7)
 
-        presence = torch.from_numpy(presence).unsqueeze(0)
+    # Iterate over all the key-value pairs in the class Key dict
+    for k in range(len(key)):
+        rgb = key[k]
+        mask = np.where(np.all(img == rgb, axis = -1))
+        presence[k] = 1
 
-        if 'label' in locals():
-            label = torch.cat((label, presence), 0)
-        else:
-            label = presence
+    label = torch.from_numpy(presence)
 
     return label
 

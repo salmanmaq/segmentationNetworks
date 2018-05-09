@@ -87,18 +87,18 @@ def main():
             #transforms.ToTensor(),
         ]),
         'test': transforms.Compose([
-            transforms.Resize((args.imageSize, args.imageSize), interpolation=Image.NEAREST),
+            transforms.Resize((args.resizedImageSize, args.resizedImageSize), interpolation=Image.NEAREST),
             transforms.ToTensor(),
             #transforms.Normalize([0.295, 0.204, 0.197], [0.221, 0.188, 0.182])
         ]),
     }
 
     # Data Loading
-    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrgans'
+    data_dir = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegRefined'
     # json path for class definitions
-    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegOrganClasses.json'
+    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiSegClasses.json'
 
-    image_datasets = {x: miccaiSegDataset(os.path.join(data_dir, x), data_transforms[x],
+    image_datasets = {x: miccaiSegPlusClassDataset(os.path.join(data_dir, x), data_transforms[x],
                         json_path) for x in ['train', 'test']}
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x],
@@ -114,7 +114,7 @@ def main():
     num_classes = len(key)
 
     # Initialize the model
-    model = UNet(num_classes)
+    model = segnetPlusClass(0.1, args.resizedImageSize, num_classes)
 
     # # Optionally resume from a checkpoint
     # if args.resume:
@@ -212,7 +212,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         seg_label = utils.generateLabel4CE(gt_temp, key)
         oneHotGT = utils.generateOneHot(gt_temp, key)
 
-        img, seg_label, class_label = Variable(img), Variable(label), Variable(class_gt)
+        img, seg_label, class_label = Variable(img), Variable(seg_label), Variable(class_gt)
 
         if use_gpu:
             img = img.cuda()
