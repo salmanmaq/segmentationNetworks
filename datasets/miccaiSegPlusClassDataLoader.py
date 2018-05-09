@@ -50,10 +50,10 @@ class miccaiSegPlusClassDataset(Dataset):
         gt = gt.convert('RGB')
 
         # Get the tool presense vector from the groundtruth image
-        tool_presence = generateToolPresenceVector(gt, self.classes)
+        tool_presence_vector = generateToolPresenceVector(gt)
 
         if self.transform:
             image = self.transform(image)
             gt = self.transform(gt)
 
-        return image, gt
+        return image, gt, tool_presence_vector

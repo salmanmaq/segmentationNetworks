@@ -21,7 +21,7 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 
 import utils
-from model.segnet import SegNet
+from model.unet import UNet
 from datasets.miccaiSegDataLoader import miccaiSegDataset
 
 parser = argparse.ArgumentParser(description='PyTorch SegNet Training')
@@ -113,29 +113,39 @@ def main():
     num_classes = len(key)
 
     # Initialize the model
-    model = SegNet(args.bnMomentum, classes)
+    model = UNet(num_classes)
 
-    # Optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            #args.start_epoch = checkpoint['epoch']
-            pretrained_dict = checkpoint['state_dict']
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model.state_dict()}
-            model.state_dict().update(pretrained_dict)
-            model.load_state_dict(model.state_dict())
-            print("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+    # # Optionally resume from a checkpoint
+    # if args.resume:
+    #     if os.path.isfile(args.resume):
+    #         print("=> loading checkpoint '{}'".format(args.resume))
+    #         checkpoint = torch.load(args.resume)
+    #         #args.start_epoch = checkpoint['epoch']
+    #         pretrained_dict = checkpoint['state_dict']
+    #         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model.state_dict()}
+    #         model.state_dict().update(pretrained_dict)
+    #         model.load_state_dict(model.state_dict())
+    #         print("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
+    #     else:
+    #         print("=> no checkpoint found at '{}'".format(args.resume))
+    #
+    #     # # Freeze the encoder weights
+    #     # for param in model.encoder.parameters():
+    #     #     param.requires_grad = False
+    #
+    #     optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
+    # else:
+    optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
 
-        # # Freeze the encoder weights
-        # for param in model.encoder.parameters():
-        #     param.requires_grad = False
-
-        optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
+    # Load the saved model
+    if os.path.isfile(args.resume):
+        print("=> loading checkpoint '{}'".format(args.resume))
+        checkpoint = torch.load(args.resume)
+        args.start_epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state_dict'])
+        print("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
     else:
-        optimizer = optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.wd)
+        print("=> no checkpoint found at '{}'".format(args.resume))
 
     print(model)
 
@@ -149,9 +159,8 @@ def main():
         model.cuda()
         criterion.cuda()
 
-    if args.evaluate:
-        validate(dataloaders['test'], model, criterion, 0, key)
-        return
+    # Initialize an evaluation Object
+    evaluator = utils.Evaluate(key, use_gpu)
 
     for epoch in range(args.start_epoch, args.epochs):
         #adjust_learning_rate(optimizer, epoch)
@@ -163,7 +172,18 @@ def main():
         # Evaulate on validation set
 
         print('>>>>>>>>>>>>>>>>>>>>>>>Testing<<<<<<<<<<<<<<<<<<<<<<<')
-        validate(dataloaders['test'], model, criterion, epoch, key)
+        validate(dataloaders['test'], model, criterion, epoch, key, evaluator)
+
+        # Calculate the metrics
+        print('>>>>>>>>>>>>>>>>>> Evaluating the Metrics <<<<<<<<<<<<<<<<<')
+        IoU = evaluator.getIoU()
+        print('Mean IoU: {}, Class-wise IoU: {}'.format(torch.mean(IoU), IoU))
+        PRF1 = evaluator.getPRF1()
+        precision, recall, F1 = PRF1[0], PRF1[1], PRF1[2]
+        print('Mean Precision: {}, Class-wise Precision: {}'.format(torch.mean(precision), precision))
+        print('Mean Recall: {}, Class-wise Recall: {}'.format(torch.mean(recall), recall))
+        print('Mean F1: {}, Class-wise F1: {}'.format(torch.mean(F1), F1))
+        evaluator.reset()
 
         save_checkpoint({
             'epoch': epoch + 1,
@@ -189,6 +209,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         # Process the network inputs and outputs
         gt_temp = gt * 255
         label = utils.generateLabel4CE(gt_temp, key)
+        oneHotGT = utils.generateOneHot(gt_temp, key)
 
         img, label = Variable(img), Variable(label)
 
@@ -213,8 +234,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         utils.displaySamples(img, seg, gt, use_gpu, key, False, epoch,
                              i, args.save_dir)
 
-
-def validate(val_loader, model, criterion, epoch, key):
+def validate(val_loader, model, criterion, epoch, key, evaluator):
     '''
         Run evaluation
     '''
@@ -228,6 +248,7 @@ def validate(val_loader, model, criterion, epoch, key):
         img = utils.normalize(img, torch.Tensor([0.295, 0.204, 0.197]), torch.Tensor([0.221, 0.188, 0.182]))
         gt_temp = gt * 255
         label = utils.generateLabel4CE(gt_temp, key)
+        oneHotGT = utils.generateOneHot(gt_temp, key)
 
         img, label = Variable(img), Variable(label)
 
@@ -244,22 +265,13 @@ def validate(val_loader, model, criterion, epoch, key):
 
         utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
                              i, args.save_dir)
+        evaluator.addBatch(seg, oneHotGT)
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
     '''
         Save the training model
     '''
     torch.save(state, filename)
-
-def adjust_learning_rate(optimizer, epoch):
-    '''
-        Sets the learning rate to the initial LR decayed by a factor of 10
-        every 30 epochs
-    '''
-
-    lr = args.lr * (0.5 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
 
 if __name__ == '__main__':
     main()

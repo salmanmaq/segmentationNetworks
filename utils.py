@@ -259,7 +259,7 @@ def generatePresenceVector(batch, key):
 
     return label
 
-def generateToolPresenceVector(gt, classes_key):
+def generateToolPresenceVector(gt):
     '''
         Generates a 7-dimensional vector, where each elements corresponds to
         the presence of a particular tool class in the image: It is 1 if a tool
@@ -270,6 +270,9 @@ def generateToolPresenceVector(gt, classes_key):
     # TODO: Complete this implementation
 
     # Disentangle the classes to a Python dict
+    # We only use the MICCAI classes here since we need to do tool classification
+    json_path = '/home/salman/pytorch/segmentationNetworks/datasets/miccaiClasses.json'
+    classes_key = json.load(open(json_path))['classes']
     key = disentangleKey(classes_key)
 
     gt = np.array(gt)
@@ -278,18 +281,13 @@ def generateToolPresenceVector(gt, classes_key):
         img = batch[i,:,:,:]
         imgSize = img.shape[1] * img.shape[2]
         img = np.transpose(img, (1,2,0))
-        presence = np.zeros(len(key) + 1) # +1 for the background class
+        presence = np.zeros(7)
 
         # Iterate over all the key-value pairs in the class Key dict
         for k in range(len(key)):
             rgb = key[k]
             mask = np.where(np.all(img == rgb, axis = -1))
-            presence[k] = len(mask[0])/imgSize
-
-        # Check for background pixels [0,0,0]
-        rgb = np.array([0,0,0])
-        mask = np.where(np.all(img == rgb, axis = -1))
-        presence[19] = len(mask[0])/imgSize
+            presence[k] = 1
 
         presence = torch.from_numpy(presence).unsqueeze(0)
 

@@ -18,23 +18,23 @@ class encoder(nn.Module):
     def __init__(self, batchNorm_momentum):
         super(encoder, self).__init__()
         self.main = nn.Sequential(
-            nn.Conv2d(3, 64, 4, 2, 1, bias=False),
+            nn.Conv2d(3, 64, 4, 2, 1, dilation=2, bias=False),
             # nn.BatchNorm2d(64, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
+            nn.Conv2d(64, 128, 4, 2, 1, dilation=2, bias=False),
             nn.BatchNorm2d(128, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.Conv2d(128, 256, 4, 2, 1, bias=False),
+            nn.Conv2d(128, 256, 4, 2, 1, dilation=2, bias=False),
             nn.BatchNorm2d(256, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.Conv2d(256, 512, 4, 2, 1, bias=False),
+            nn.Conv2d(256, 512, 4, 2, 1, dilation=2, bias=False),
             nn.BatchNorm2d(512, momentum=batchNorm_momentum),
             nn.ReLU(True),
 
-            nn.Conv2d(512, 1024, 4, 1, 0, bias=False),
+            nn.Conv2d(512, 1024, 4, 1, 0, dilation=2, bias=False),
             nn.BatchNorm2d(1024, momentum=batchNorm_momentum),
             nn.ReLU(True)
         )
@@ -90,6 +90,8 @@ class SegNet(nn.Module):
 
     def forward(self, x):
         latent = self.encoder(x)
+        print('Latent Shape')
+        print(latent.shape)
         output = self.decoder(latent)
 
         return output
