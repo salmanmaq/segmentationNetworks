@@ -1,0 +1,46 @@
+{
+  "classes": [
+    {
+      "id": "0",
+      "name": "grasper",
+      "color": "[0,85,170]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "1",
+      "name": "bipolar",
+      "color": "[0,85,255]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "2",
+      "name": "hook",
+      "color": "[0,170,85]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "3",
+      "name": "scissors",
+      "color": "[0,255,85]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "4",
+      "name": "clipper",
+      "color": "[0,255,170]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "5",
+      "name": "irrigator",
+      "color": "[85,0,170]",
+      "super-category": "instrument"
+    },
+    {
+      "id": "6",
+      "name": "specimen-bag",
+      "color": "[85,0,255]",
+      "super-category": "instrument"
+    }
+  ]
+}
