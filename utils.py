@@ -57,7 +57,6 @@ class Evaluate():
         fnmult = (1-seg) * (gt) #times prediction says its not that class and gt says it is
         fn = torch.sum(torch.sum(torch.sum(fnmult, dim=0, keepdim=True), dim=2, keepdim=True), dim=3, keepdim=True).squeeze()
 
-        #print('{},{},{},{}'.format(tpmult,tp,fp,fn))
         self.tp += tp.double().cpu()
         self.fp += fp.double().cpu()
         self.fn += fn.double().cpu()
@@ -216,7 +215,6 @@ def reverseOneHot(batch, key):
             #mask = np.where(np.all(idxs == k, axis=-1))
             segSingle[mask] = rgb
 
-        # print(segSingle[120:130,120:130,:])
         segMask = np.expand_dims(segSingle, axis=0)
         if 'generated' in locals():
             generated = np.concatenate((generated, segMask), axis=0)
@@ -276,15 +274,14 @@ def generateToolPresenceVector(gt):
 
     img = np.array(gt)
 
-    imgSize = img.shape[1] * img.shape[2]
-    img = np.transpose(img, (1,2,0))
     presence = np.zeros(7)
 
     # Iterate over all the key-value pairs in the class Key dict
     for k in range(len(key)):
         rgb = key[k]
-        mask = np.where(np.all(img == rgb, axis = -1))
-        presence[k] = 1
+        mask = np.where(np.all(img == rgb, axis = 2))
+        if len(mask[0]) > 0:
+            presence[k] = 1
 
     label = torch.from_numpy(presence)
 
@@ -346,8 +343,6 @@ def generateGTmask(batch, key):
             label = torch.cat((label, cat_mask), 0)
         else:
             label = cat_mask
-        #print('img copy masked')
-        #print(img_copy)
 
     label = torch.squeeze(label, dim=2)
     return label
@@ -361,8 +356,6 @@ def labelToImage(label, key):
     img_dim = int(math.sqrt(label.shape[1]))
     label = label[0,:]
     label = np.around(label).astype(int)
-    #print(label)
-    #print(np.min(label))
     gen = np.ones((label.shape[0], 3)) * 255
 
     for k in range(len(key) + 1):
@@ -372,8 +365,6 @@ def labelToImage(label, key):
             rgb = key[k]
         mask = label == k
         gen[mask] = rgb
-
-    # print(gen)
 
     gen = np.reshape(gen, (img_dim, img_dim, 3))
 

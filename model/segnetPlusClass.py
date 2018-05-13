@@ -77,12 +77,14 @@ class decoder(nn.Module):
 
         self.classifier = nn.Conv2d(num_classes, 7, img_size, bias=True)
         self.smax = nn.Softmax(dim=1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input):
         seq_output = self.main(input)
-        classified = self.classifier(seq_output)
+        classified_1 = self.classifier(seq_output)
+        classified = self.sigmoid(classified_1)
         segmented = self.smax(seq_output)
-        return classified, segmented
+        return classified.squeeze(), segmented
 
 class segnetPlusClass(nn.Module):
     '''
