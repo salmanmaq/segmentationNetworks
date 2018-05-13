@@ -75,12 +75,12 @@ class decoder(nn.Module):
             nn.ConvTranspose2d(64, num_classes, 4, 2, 1, bias=False)
         )
 
-        self.fc = nn.Conv2d(19, 7, img_size, bias=True)
+        self.classifier = nn.Conv2d(num_classes, 7, img_size, bias=True)
         self.smax = nn.Softmax(dim=1)
 
     def forward(self, input):
         seq_output = self.main(input)
-        classified = self.fc(seq_output)
+        classified = self.classifier(seq_output)
         segmented = self.smax(seq_output)
         return classified, segmented
 

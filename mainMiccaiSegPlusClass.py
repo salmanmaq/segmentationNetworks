@@ -151,7 +151,7 @@ def main():
     print(model)
 
     # Define loss function (criterion)
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     # Use a learning rate scheduler
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
@@ -212,7 +212,11 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         seg_label = utils.generateLabel4CE(gt_temp, key)
         oneHotGT = utils.generateOneHot(gt_temp, key)
 
-        img, seg_label, class_label = Variable(img), Variable(seg_label), Variable(class_gt)
+        class_label = class_gt
+        for _ in range(9):
+            class_label = torch.cat((class_label, class_gt), 0)
+
+        img, seg_label, class_label = Variable(img), Variable(seg_label), Variable(class_label).float()
 
         if use_gpu:
             img = img.cuda()
@@ -222,7 +226,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
         # Compute output
         classified, segmented = model(img)
         seg_loss = model.dice_loss(segmented, seg_label)
-        class_loss = criterion(classified, class_label)
+        class_loss = criterion(classified.squeeze(), class_label)
         total_loss = seg_loss + class_loss
 
         # Compute gradient and do SGD step
@@ -232,11 +236,11 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, key):
 
         scheduler.step(total_loss.mean().data[0])
 
-        print('[%d/%d][%d/%d] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
+        print('[{0:d}/{0:d}][{0:d}/{0:d}] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
             args.epochs-1, i, len(train_loader)-1, total_loss.mean().data[0],
             seg_loss.mean().data[0], class_loss.mean().data[0]))
 
-        utils.displaySamples(img, seg, gt, use_gpu, key, False, epoch,
+        utils.displaySamples(img, segmented, seg_gt, use_gpu, key, False, epoch,
                              i, args.save_dir)
 
 def validate(val_loader, model, criterion, epoch, key, evaluator):
@@ -268,11 +272,11 @@ def validate(val_loader, model, criterion, epoch, key, evaluator):
         class_loss = criterion(classified, class_label)
         total_loss = seg_loss + class_loss
 
-        print('[%d/%d][%d/%d] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
+        print('[{0:d}/{0:d}][{0:d}/{0:d}] Total Loss: {0:.4f}, Segmentation Loss: {0:.4f}, Classification Loss: {0:.4f}'.format(epoch,
             args.epochs-1, i, len(val_loader)-1, total_loss.mean().data[0],
             seg_loss.mean().data[0], class_loss.mean().data[0]))
 
-        utils.displaySamples(img, seg, gt, use_gpu, key, args.saveTest, epoch,
+        utils.displaySamples(img, segmented, seg_gt, use_gpu, key, args.saveTest, epoch,
                              i, args.save_dir)
         evaluator.addBatch(seg, oneHotGT)
 
