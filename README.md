@@ -1,4 +1,29 @@
 # Conv-EncDec-PyTorch
+
+If you use our code or data in your work, please do cite our paper
+
+```
+@article{maqbool2020m2caiseg,
+  title={m2caiSeg: Semantic Segmentation of Laparoscopic Images using Convolutional Neural Networks},
+  author={Maqbool, Salman and Riaz, Aqsa and Sajid, Hasan and Hasan, Osman},
+  journal={arXiv preprint arXiv:2008.10134},
+  year={2020}
+}
+```
+
+\
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+ \
+**IGNORE BELOW - IT IS OUTDATED**
+ 
+
+### Deprecated readme - please ignore
 [WIP]
 [Detailed Readme to be added]
 
