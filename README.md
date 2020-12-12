@@ -1,4 +1,8 @@
-# Conv-EncDec-PyTorch
+# m2caiSeg: Semantic Segmentation of Laparoscopic Images using Convolutional Neural Networks
+
+Code for our paper [m2caiSeg: Semantic Segmentation of Laparoscopic Images using Convolutional Neural Networks](https://arxiv.org/abs/2008.10134)
+
+The dataset is available on kaggle at: https://www.kaggle.com/salmanmaq/m2caiseg
 
 If you use our code or data in your work, please do cite our paper
 
@@ -11,6 +15,14 @@ If you use our code or data in your work, please do cite our paper
 }
 ```
 
+I know this is quite disorganized, and possibly a bit oudated and not maintained. I do not plan to refactor it; really sorry about it as I have become really occupied with other tasks. However, if you require any help in running this, or run into any issues, please create an issue here on GitHub and I would try to help resolve it as much as I can. I would also encourage just using the dataset in a better framework or library if you just need to use the dataset.
+
+This is essentially a Convolutional Encoder Decoder network based on the SegNet architecture for unsupervised feature learning. The particular network can be used for unsupervised feature learning on particular datasets, as well as then fine-tune (further train) the pre-trained network for semantic segmentation.
+The PyTorch Dataset class for the m2caiSeg dataset has been provided. You can make the changes in that to adapt to your dataset.
+
+A sample training script is also provided.
+
+
 \
  \
  \
@@ -21,12 +33,7 @@ If you use our code or data in your work, please do cite our paper
  \
  \
 **IGNORE BELOW - IT IS OUTDATED**
- 
-
 ### Deprecated readme - please ignore
-[WIP]
-[Detailed Readme to be added]
-
 [ToDo]
 1. Update the Readme 
   -> Provide detailed instructions on how to run and where to make changes
@@ -37,10 +44,3 @@ If you use our code or data in your work, please do cite our paper
 5. Try more transforms
 6. Make displaying images a parameter
 7. Nice graphs -> Possibly use Visdom or Tensorboard
-
-Convolutional Encoder Decoder network based on the SegNet architecture for unsupervised feature learning
-
-This SegNet based Convolutional Encoder-Decoder network can be used for unsupervised feature learning for particular datasets.
-The PyTorch Dataset class for the MICCAI dataset has been provided. You can make the changes in that to adapt to your dataset.
-
-A sample training script is also provided.
